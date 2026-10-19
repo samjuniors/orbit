@@ -1,0 +1,29 @@
+# Building something over many days with ORBIT
+
+ORBIT is a bridge, not a planner. It pulls one authorized unit of work, executes it in an isolated worktree, verifies it, reports, and stops. It does not decide what your app needs, how to sequence features, or when something is "done enough." That decision-making stays with you (or with a planning conversation you have separately, e.g. with Claude in chat) -- because an agent deciding its own scope is exactly the kind of autonomy a tray-based background tool shouldn't have. This doc is the pattern for keeping that split clean across a multi-day build, based on the same approach already proven on the Aro project.
+
+## The core idea: roadmap in Linear, gates as issues, ORBIT executes one gate at a time
+1. **Write (or generate with help from Claude/an agent, in a normal chat -- not via ORBIT) a ROADMAP for the app**, broken into phases, each phase broken into gates. A gate is a chunk of work small enough to verify in one sitting -- "scaffold the project and a passing empty test," not "build the whole app." For a todo app, phases might be: A) scaffold + CI, B) data model + storage, C) add/complete/delete UI, D) persistence, E) polish/tests.
+2. **One gate = one Linear issue.** The issue description is the actual prompt content ORBIT will hand the agent, so write it like a spec: what to build, acceptance criteria, what's explicitly out of scope for this gate. This is where "who writes the prompt" gets answered -- you do, once per gate, not ORBIT improvising per task.
+3. **The roadmap document itself is append-only.** Never delete or renumber a finished gate. If you think of something extra mid-build, it becomes a *new* substep or a separate change-request note, not a rewrite of what's already done -- so the history stays a true record of what happened and why, and a half-finished roadmap is always resumable by re-reading it.
+4. **ORBIT only ever sees "Ready" issues, one gate at a time.** Don't dump the whole roadmap into the Ready column at once -- move the next gate's issue to Ready only when the previous one has actually been reviewed and accepted. This is the real fix for "if I send the complete roadmap at once it'll start pulling everything": ORBIT polls Ready and claims the oldest eligible issue, so if ten gates are all Ready simultaneously, ORBIT will plow through them back-to-back with only the review-gate pause in between -- which is more autonomy than a multi-day build should get. Keep the queue to one (or a couple of independent, non-conflicting) gates at a time.
+5. **Gate transitions are a human decision, deliberately.** Supervised mode (or `requireApprovalBeforeReview`, which applies in every tier) is what makes "it asks to resume for the next gate" literal: ORBIT pauses after each gate passes verification and waits for you to approve before it touches Linear again. That pause is the checkpoint -- review the diff, decide if gate 2 can start, then open it.
+6. **Changes and extra ideas go in a separate ADR/notes doc**, not mid-gate. If you think of a feature while gate 2 is running, write it down separately and fold it into a future gate -- don't redefine the current one while the agent is mid-flight.
+
+## Surviving a shutdown mid-gate
+A gate is scoped to fit inside ORBIT's existing implement -> verify -> fix-retry loop, which already persists everything that matters to disk before it needs you again:
+- The worktree and branch for the current gate live on disk at a fixed path and are **not** deleted on failure, crash, or an interrupted run -- only on a clean finish.
+- If ORBIT (or the PC) stops mid-run, the next launch logs that interruption and leaves the issue claimed; the worktree is still sitting there with whatever the agent had written.
+- Use **Resume** on that task: it picks the agent back up in the same worktree/branch rather than starting the gate over. How well it actually continues depends on the agent CLI reading the existing files (there's no true session memory carried over -- see the honesty note from before), which is one more reason to keep gates small: resuming a 20-minute gate is low-risk; resuming a task that was meant to build "the whole app" in one shot is not.
+- This is also why gates should be small and verifiable (point 2 above) -- a shutdown mid-gate costs you at most one gate's worth of possible rework, not a day's.
+
+## So: do we need a decision engine inside ORBIT?
+No -- and adding one would work against the "it's just a tray bridge" goal you stated. A decision engine (something that reads a whole roadmap and decides what to build next, re-plans on failure, invents scope) is real complexity and real autonomy risk, sitting permanently in your system tray. The gate pattern above gets you the same practical outcome -- steady, multi-day, mostly-unattended progress -- by moving the planning into a document you (or a one-off planning chat) control, and keeping ORBIT's job mechanical: claim, run, verify, retry, stop, report. If this stops being enough once you're using it heavily, the next step up is a *very* small "what's the next Ready issue in this project" scheduler -- still not a planner -- not a general decision engine.
+
+## Who writes the prompt, concretely
+- **Project instructions** (ORBIT setting, written once per project): house rules -- conventions, stack, what never to touch.
+- **Each gate's issue description** (written by you, or drafted by you with help from a normal Claude/agent chat *before* it goes in Linear): the actual task spec for that gate.
+- **ORBIT** only assembles these plus the current permission state into the final prompt at run time -- it never originates task content.
+
+## Tool/skill needs
+None inside ORBIT. The "skill" is entirely in how gates are written -- use `docs/TASK-TEMPLATE.md` in this repo as the copy-paste starting point for every gate issue.
