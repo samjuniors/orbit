@@ -36,6 +36,7 @@ function buildPrompt({ c, issue, permissionSummary, fixContext }) {
     `Project: ${c.projectName || path.basename(c.projectPath)}`,
     `Project instructions: ${projectInstructions}`,
     'Execution constraints: Work only inside the current worktree. Do not modify secrets, install global software, or change machine settings. Do not bypass agent permission prompts. If blocked by a permission request, stop and report what needs approval. Run only repository-local checks that are already configured. Finish by summarizing changed files, checks run, and remaining risks.',
+    'You are running non-interactively: there is no human available to answer a question or confirm a prompt during this run. Never pause to ask for input or wait for confirmation. If something is ambiguous, make the most reasonable assumption, clearly note that assumption and your reasoning in your final summary, and keep going.',
     `Current permission settings for this run (enforced by a wrapper, not just a suggestion): ${permissionSummary}.`
   ];
   if (fixContext) parts.push(`Continuation context (read this first -- this is not a fresh task): ${fixContext}`);
