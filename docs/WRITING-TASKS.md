@@ -1,4 +1,6 @@
-# Gate / task template (paste into a Linear issue description)
+# Writing tasks that finish
+
+In `PLAN.md` a task is a checkbox line plus indented detail. The same structure works as a Linear/GitHub issue body. Keep each task small enough to verify in one sitting; if you can't write a believable "Definition of done", it is two tasks.
 
 Keep one gate small enough to verify in a single sitting. If you can't write a believable "Definition of done" for it in a few bullets, it's probably two gates.
 
@@ -25,6 +27,6 @@ from quietly expanding the gate.>
 ```
 
 ## Rules this template exists to enforce
-- One gate, one issue, one Ready-queue slot at a time -- see `docs/ROADMAP-PATTERN.md`.
+- One task per checkbox; append new ideas as new tasks instead of rewriting finished ones.
 - "Definition of done" must be checkable by the verification command where possible, not just by reading the agent's own summary.
 - New ideas while a gate is running go in a separate note/ADR, not into this issue mid-flight.

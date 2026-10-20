@@ -1,53 +1,14 @@
 {
-  "name": "orbit-windows-worker",
-  "version": "0.2.0",
-  "private": true,
-  "description": "ORBIT Windows tray worker for authorized Linear tasks and local coding-agent CLIs.",
-  "main": "src/main.js",
-  "type": "commonjs",
+  "name": "orbit-runner",
+  "version": "0.3.0",
+  "description": "Run a plan through your coding agent (Claude Code, Codex, Antigravity, OpenCode, Grok Build...) unattended, with verification, policy guardrails and a morning report.",
+  "license": "MIT",
+  "bin": { "orbit": "bin/orbit.js" },
+  "engines": { "node": ">=20" },
+  "files": ["bin", "src/engine", "docs", "README.md", "LICENSE"],
   "scripts": {
-    "start": "electron .",
-    "dev": "electron . --dev",
-    "dist:win": "electron-builder --win nsis",
-    "pack:win": "electron-builder --win dir",
     "test": "node --test tests/*.test.js",
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/core/discovery.js && node --check src/core/lifecycle.js && node --check src/core/agents.js && node --check src/core/linear.js && node --check src/core/linear-auth.js && node --check src/core/oauth.js && node --check src/core/permissions.js && node --check src/core/schedule.js && node --check src/core/worker.js && node --check src/core/store.js && node --check src/renderer/app.js"
-  },
-  "devDependencies": {
-    "electron": "^39.2.7",
-    "electron-builder": "^26.7.0"
-  },
-  "build": {
-    "appId": "com.samjuniors.orbit.worker",
-    "productName": "ORBIT Worker",
-    "asar": true,
-    "directories": {
-      "output": "release"
-    },
-    "files": [
-      "src/**/*",
-      "package.json",
-      "README.md",
-      "LICENSE"
-    ],
-    "win": {
-      "target": [
-        {
-          "target": "nsis",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "artifactName": "ORBIT-Worker-Setup-${version}.${ext}"
-    },
-    "nsis": {
-      "oneClick": false,
-      "perMachine": false,
-      "allowToChangeInstallationDirectory": true,
-      "createDesktopShortcut": true,
-      "createStartMenuShortcut": true,
-      "shortcutName": "ORBIT Worker"
-    }
+    "check": "node --check bin/orbit.js && node --check src/engine/plan.js && node --check src/engine/policy.js && node --check src/engine/guard.js && node --check src/engine/adapters.js && node --check src/engine/process.js && node --check src/engine/state.js && node --check src/engine/report.js && node --check src/engine/engine.js",
+    "test:tray": "npm --prefix apps/tray test"
   }
 }

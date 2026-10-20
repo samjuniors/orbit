@@ -4,6 +4,21 @@ All notable changes to ORBIT Worker are documented here. Format loosely follows 
 ## [Unreleased]
 - Nothing yet.
 
+## [0.3.0] - headless engine
+### Added
+- `orbit` CLI and zero-dependency engine (`bin/`, `src/engine/`): runs a markdown `PLAN.md` task by task through any coding-agent CLI, one fresh session per task, in an isolated git worktree.
+- Verification gate (`verify` command), retry-with-feedback loop, per-task timeout, stall detection, rate-limit wait/retry, attempt/task/runtime caps.
+- Crash-safe state (`.orbit/state.json`, atomic writes) and automatic resume; one-run-per-project lock; append-only plan (new tasks are picked up).
+- Policy file (`orbit.policy.json`) with allow/block rules, optional per-task approval (`orbit approve|reject`), and a cross-platform git/gh command guard (parses global options such as `-C`, refuses alias overrides).
+- Adapters: Claude Code, Codex, Antigravity, OpenCode, Grok Build, and a generic command adapter (flags unverified on real installs).
+- Morning report (`.orbit/report.md`), `orbit doctor`, `orbit run --dry-run`.
+- CI matrix (Linux/Windows/macOS, Node 20/22). 20 new engine tests with real git and a scriptable fake agent.
+### Changed
+- The Electron tray app moved to `apps/tray` (unchanged, still Linear-driven). Its installer workflow now runs on `tray-v*` tags only.
+- README, docs rewritten around the engine. `docs/ROADMAP-PATTERN.md` removed; `docs/TASK-TEMPLATE.md` became `docs/WRITING-TASKS.md`.
+### Known gaps
+- Never run against the real agent CLIs; Windows/macOS untested beyond CI configuration.
+
 ## [0.2.0] - versioning + process baseline
 ### Added
 - This changelog, `ROADMAP.md`, and `docs/TASK-TEMPLATE.md` (see below) — no code behavior changes.

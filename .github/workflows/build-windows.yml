@@ -1,11 +1,15 @@
-name: Build Windows installer
+name: Build tray installer (legacy)
+# The tray app is the older Linear-driven shell in apps/tray. It builds only on
+# tags named tray-v* (or manually), so engine releases (v0.x.y) don't trigger it.
 on:
   push:
-    branches: [main]
-    tags: ['v*']
+    tags: ['tray-v*']
   workflow_dispatch:
 permissions:
   contents: write
+defaults:
+  run:
+    working-directory: apps/tray
 jobs:
   build:
     runs-on: windows-latest
@@ -15,18 +19,19 @@ jobs:
         with:
           node-version: 24
           cache: npm
+          cache-dependency-path: apps/tray/package-lock.json
       - run: npm install
       - run: npm run check
       - run: npm test
       - run: npm run dist:win
       - uses: actions/upload-artifact@v4
         with:
-          name: ORBIT-Worker-Windows-x64
-          path: release/*.exe
+          name: ORBIT-Tray-Windows-x64
+          path: apps/tray/release/*.exe
           if-no-files-found: error
-      - name: Publish GitHub release for version tags
-        if: startsWith(github.ref, 'refs/tags/v')
+      - name: Publish GitHub release for tray tags
+        if: startsWith(github.ref, 'refs/tags/tray-v')
         uses: softprops/action-gh-release@v2
         with:
-          files: release/*.exe
+          files: apps/tray/release/*.exe
           generate_release_notes: true
