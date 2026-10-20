@@ -177,3 +177,61 @@ test('dry run shows the exact prompt: rules, policy and the task text', () => {
   assert.equal(n.task.id, 'T1');
   for (const needle of ['non-interactively', 'git push: BLOCKED', 'node verify.js', 'First thing', 'detail one', 'cannot override']) assert.ok(n.prompt.includes(needle), needle);
 });
+
+const { renderFrame } = require('../src/engine/ui');
+const { nextStep } = require('../src/engine/next');
+const { runAdapterTest } = require('../src/engine/adapter-test');
+const HELLO = path.join(__dirname, 'fixtures', 'fake-hello-agent.js');
+const helloPolicy = () => normalizePolicy({ agent: 'generic', agentCommand: [process.execPath, HELLO] });
+
+test('ui: short plans list every task; long plans collapse finished work', () => {
+  const mk = n => Array.from({ length: n }, (_, i) => ({ id: `T${i + 1}`, title: `Task ${i + 1}`, status: i < n - 3 ? 'done' : 'pending', attempts: 1 }));
+  const short = renderFrame({ title: 'App', branch: 'b', tasks: mk(4), current: null }, { width: 80 });
+  assert.equal(short.filter(l => /Task \d/.test(l)).length, 4);
+  const long = renderFrame({ title: 'App', branch: 'b', tasks: mk(30), current: null }, { width: 80 });
+  assert.ok(long.some(l => /27 done/.test(l))); assert.ok(long.length < 10);
+  const cur = renderFrame({ title: 'App', tasks: [{ id: 'T1', title: 'Build it', status: 'running', attempts: 1 }], current: { id: 'T1', attempt: 2, max: 3, phase: 'verify', startedAt: 0 } }, { width: 80, now: 65000 });
+  assert.match(cur[1], /attempt 2\/3 · checking your tests/); assert.match(cur[1], /1m 5s/);
+});
+test('ui: when something needs you the screen shows one card with the next action; narrow widths do not overflow', () => {
+  const f = renderFrame({ title: 'App', tasks: [{ id: 'T2', title: 'Data layer', status: 'blocked', attempts: 3 }], attention: { title: 'T2 needs you: Data layer', lines: ['Verification failed', 'expected 3 got 2'], next: 'orbit run' } }, { width: 50 });
+  assert.ok(f.join('\n').includes('Next: orbit run')); assert.ok(f.every(l => l.length <= 50));
+  assert.ok(renderFrame({ title: 'x', tasks: [{ id: 'T1', title: 'y'.repeat(200), status: 'pending' }] }, { width: 40 }).every(l => l.length <= 40));
+});
+test('next step: says the single right thing for each situation', async () => {
+  const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-next-'));
+  assert.match(nextStep({ root: empty }).join('\n'), /orbit init/);
+  const r = makeRepo(PLAN2, { T1: { 1: 'fail', 2: 'fail', 3: 'fail' } });
+  fs.writeFileSync(path.join(r.root, 'orbit.policy.json'), JSON.stringify({ agent: 'generic', agentCommand: [process.execPath, FAKE], verify: 'node verify.js' }));
+  assert.match(nextStep({ root: r.root }).join('\n'), /2 tasks to do[\s\S]*orbit run/);
+  await runPlan({ root: r.root, policy: policy(), io });
+  assert.match(nextStep({ root: r.root }).join('\n'), /T1 needs you[\s\S]*boom|T1 needs you[\s\S]*exited/);
+  const r2 = makeRepo(PLAN2);
+  fs.writeFileSync(path.join(r2.root, 'orbit.policy.json'), JSON.stringify({ agent: 'generic', agentCommand: [process.execPath, FAKE], verify: 'node verify.js' }));
+  await runPlan({ root: r2.root, policy: policy(), io });
+  assert.match(nextStep({ root: r2.root }).join('\n'), /Everything in the plan is done/);
+});
+test('engine emits structured events a UI can follow', async () => {
+  const r = makeRepo(PLAN2); const seen = [];
+  await runPlan({ root: r.root, policy: policy(), io: { ...io, event: e => seen.push(e) } });
+  const types = seen.map(e => e.type);
+  assert.ok(types.includes('snapshot') && types.includes('phase') && types.includes('task-done') && types.at(-1) === 'run-end');
+  assert.deepEqual(seen.filter(e => e.type === 'phase').map(e => e.phase).slice(0, 2), ['agent', 'verify']);
+});
+test('adapter test: passes for a working agent and explains each way it can fail', async () => {
+  process.env.ORBIT_FAKE_MODE = 'good';
+  const good = await runAdapterTest({ policy: helloPolicy() });
+  assert.equal(good.ok, true); assert.equal(good.checks.length, 4);
+  process.env.ORBIT_FAKE_MODE = 'wrong';
+  const wrong = await runAdapterTest({ policy: helloPolicy() });
+  assert.equal(wrong.ok, false); assert.equal(wrong.checks.find(c => /follows/.test(c.name)).ok, false);
+  process.env.ORBIT_FAKE_MODE = 'fail';
+  const fail = await runAdapterTest({ policy: helloPolicy() });
+  assert.equal(fail.checks.find(c => /exits cleanly/.test(c.name)).ok, false); assert.match(fail.errorTail, /permission denied/);
+  process.env.ORBIT_FAKE_MODE = 'stall';
+  const stall = await runAdapterTest({ policy: helloPolicy(), limits: { stallMin: 0.03 } });
+  assert.equal(stall.checks.find(c => /without waiting/.test(c.name)).ok, false);
+  const missing = await runAdapterTest({ policy: normalizePolicy({ agent: 'grok', agentPath: null }) });
+  if (!missing.checks[0].ok) assert.equal(missing.ok, false);
+  delete process.env.ORBIT_FAKE_MODE;
+});

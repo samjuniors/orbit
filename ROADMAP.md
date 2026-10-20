@@ -6,11 +6,11 @@ Append-only: finished phases are never rewritten; new asks become new phases or 
 - 0.2 git history, versioning, process docs
 - 0.3 headless engine + CLI (see CHANGELOG)
 
-## 0.4 "Adapters you can trust" (next)
-- Adapter capability model (headless, json events, permission modes, session resume, sandbox).
+## 0.4 "Adapters you can trust" (done: canary test, listing, terminal UI; remaining items moved to 0.4.x)
+- (0.4.x) Adapter capability model (json events, session resume, sandbox).
 - `orbit adapter test <agent>`: a conformance suite of tiny canary tasks (write a file, fail verify then pass, stall, rate-limit text) so any adapter can be checked on the user's own machine.
-- Public compatibility matrix in the README, filled by users' test reports.
-- Parse structured agent output (stream-json) for live progress and rate-limit detection.
+- (0.4.x) Public compatibility matrix in the README, filled by users' `adapter test` reports.
+- (0.4.x) Parse structured agent output (stream-json) for live progress and rate-limit detection.
 - First real runs against Claude Code, Codex, Antigravity, OpenCode, Grok Build; fix flags.
 
 ## 0.5 "Where people already are"

@@ -51,6 +51,12 @@ function buildPrompt({ plan, task, state, policy, continuation }) {
   return parts.filter(Boolean).join('\n\n');
 }
 
+// Structured events for the terminal UI (and anything else that wants to watch a run).
+const emit = (io, e) => { try { io.event && io.event(e); } catch {} };
+function snapshot(plan, state) {
+  return { type: 'snapshot', title: plan.title, branch: state.branch, worktree: state.worktree, tasks: plan.tasks.map(t => { const s = state.tasks[t.id]; return { id: t.id, title: t.title, status: t.done ? 'done' : (s?.status || 'pending'), attempts: s?.attempts || 0 }; }) };
+}
+
 function nextTask(plan, state, policy) {
   return plan.tasks.find(t => {
     if (t.done) return false;
@@ -86,8 +92,9 @@ async function runTask(ctx, task) {
   const { root, policy, io, state, planFile, wt, identity } = ctx;
   const lim = policy.limits;
   const ts = (state.tasks[task.id] ||= { status: 'pending', attempts: 0, rateLimitWaits: 0 });
-  const save = () => saveState(root, state);
+  const save = () => { saveState(root, state); if (ctx.plan) emit(io, snapshot(ctx.plan, state)); };
   const log = m => { io.log(m); appendLog(root, m); };
+  const phase = (name, extra = {}) => emit(io, { type: 'phase', id: task.id, title: task.title, phase: name, attempt: ts.attempts, max: lim.maxAttempts, ...extra });
   ts.startedAt ||= iso();
   const commit = (message) => {
     fs.writeFileSync(path.join(wt, planFile), (() => { let t = readPlan(root, planFile); for (const [id, s] of Object.entries(state.tasks)) if (s.status === 'done' || id === task.id) t = markDone(t, id); return t; })());
@@ -101,10 +108,11 @@ async function runTask(ctx, task) {
 
   const approvalPhase = async () => {
     ts.status = 'awaiting-approval'; state.status = 'awaiting-approval'; save();
-    const v = await waitForApproval({ root, task, io, state });
+    phase('approval');
+    const v = io.ask ? await io.ask({ task, stat: ts.stat, commit: ts.commit }) : await waitForApproval({ root, task, io, state });
     state.status = 'running';
     if (v.approved) { ts.status = 'done'; ts.finishedAt = iso(); save(); log(`${task.id} approved.`); return 'done'; }
-    ts.status = 'blocked'; ts.lastError = `Rejected by you: ${v.reason || '(no reason given)'}. The commit is still on the branch; run orbit again to have the agent redo it with this feedback.`; save(); log(`${task.id} rejected.`); return 'blocked';
+    ts.status = 'blocked'; ts.lastError = `Rejected by you: ${v.reason || '(no reason given)'}. The commit is still on the branch; run orbit again to have the agent redo it with this feedback.`; save(); log(`${task.id} rejected.`); emit(io, { type: 'task-blocked', id: task.id, title: task.title, error: ts.lastError }); return 'blocked';
   };
 
   if (ts.status === 'awaiting-approval') return approvalPhase();
@@ -124,6 +132,7 @@ async function runTask(ctx, task) {
     try {
       const inv = buildInvocation(policy, { prompt, cwd: wt });
       log(`${task.id} attempt ${ts.attempts}/${lim.maxAttempts}: running ${policy.agent}`);
+      phase('agent');
       res = await runProcess({ exe: inv.exe, args: inv.args, cwd: wt, env: { ...guard.env, ORBIT_TASK_ID: task.id, ORBIT_ATTEMPT: String(ts.attempts), ORBIT_PROMPT_FILE: promptFile, ORBIT_WORKTREE: wt }, timeoutMs: lim.taskTimeoutMin * 60000, stallMs: lim.stallMin * 60000, onOutput: io.onOutput });
     } finally { guard.cleanup(); fs.rmSync(promptFile, { force: true }); }
 
@@ -132,6 +141,7 @@ async function runTask(ctx, task) {
       if (!res.timedOut && !res.stalled && RATE_LIMIT_RE.test(text) && ts.rateLimitWaits < lim.maxRateLimitWaits) {
         ts.rateLimitWaits++; ts.attempts--; ts.status = 'running'; save();
         log(`${task.id}: the agent hit a rate/usage limit. Waiting ${lim.rateLimitWaitMin} min before trying again (wait ${ts.rateLimitWaits}/${lim.maxRateLimitWaits}). This does not count as a failed attempt.`);
+        phase('rate-wait', { minutes: lim.rateLimitWaitMin });
         await io.sleep(lim.rateLimitWaitMin * 60000);
         continue;
       }
@@ -144,7 +154,7 @@ async function runTask(ctx, task) {
     if (!dirty && headAfter === headBefore && !policy.allowNoChanges) { ts.lastError = 'The agent finished but changed nothing. If the task really needs no change, say why; otherwise make the change.'; log(`${task.id}: no changes made.`); save(); continue; }
 
     if (policy.verify) {
-      ts.status = 'verifying'; save();
+      ts.status = 'verifying'; save(); phase('verify');
       const v = await runProcess({ shellCommand: policy.verify, cwd: wt, timeoutMs: lim.verifyTimeoutMin * 60000 });
       const ok = v.code === 0 && !v.timedOut;
       ts.verify = { ok, code: v.code, tail: tail(`${v.stdout}\n${v.stderr}`, 2000) };
@@ -159,10 +169,12 @@ async function runTask(ctx, task) {
     if (policy.approval === 'each-task') return approvalPhase();
     ts.status = 'done'; ts.finishedAt = iso(); save();
     log(`${task.id} done (${c.sha.slice(0, 8)}).`);
+    emit(io, { type: 'task-done', id: task.id, commit: c.sha });
     return 'done';
   }
   ts.status = 'blocked'; state.tasks[task.id] = ts; save();
   log(`${task.id} is blocked after ${ts.attempts} attempt(s). Stopping here: it needs you.`);
+  emit(io, { type: 'task-blocked', id: task.id, title: task.title, error: ts.lastError });
   return 'blocked';
 }
 
@@ -203,6 +215,7 @@ async function runPlan({ root, planFile = 'PLAN.md', policy, io = defaultIo() })
     let completed = 0, final = 'done';
     for (;;) {
       const plan = parsePlan(readPlan(root, planFile)); // re-read each loop: appending tasks mid-run is supported
+      ctx.plan = plan; emit(io, snapshot(plan, state));
       if (policy.limits.maxRuntimeMin && io.now() - t0 > policy.limits.maxRuntimeMin * 60000) { final = 'stopped'; state.stopReason = `runtime limit (${policy.limits.maxRuntimeMin} min)`; break; }
       if (policy.limits.maxTasks && completed >= policy.limits.maxTasks) { final = 'stopped'; state.stopReason = `task limit (${policy.limits.maxTasks})`; break; }
       const task = nextTask(plan, state, policy);
@@ -216,6 +229,7 @@ async function runPlan({ root, planFile = 'PLAN.md', policy, io = defaultIo() })
     fs.writeFileSync(p.report, renderReport({ state, plan: finalPlan, policy }));
     appendLog(root, `run ${state.runId} finished: ${final}`);
     io.log(`Run ${final}. Report: ${p.report}`);
+    emit(io, { type: 'run-end', status: final, stopReason: state.stopReason, reportPath: p.report });
     return { status: final, exitCode: EXIT[final], state, reportPath: p.report };
   } finally { release(); }
 }

@@ -9,6 +9,8 @@
 | `grok` | `grok` | `grok <agentArgs> -p <prompt>` |
 | `generic` | your command | `policy.agentCommand`, with `{prompt}` substituted |
 
+**Prove it on your machine:** `orbit adapter test <agent>` runs one tiny real task (create a file, verified by a script) in a throwaway folder. It checks that the agent is found, runs without waiting for input, exits cleanly, and actually follows the task. If it fails it prints the agent's own error and a hint. It uses a little of your quota; add `--yes` to skip the confirmation.
+
 **Verify before trusting.** These come from vendor docs and earlier tool discovery, not from runs on a real install. Run `orbit doctor`, check `<agent> --help`, try `orbit run --dry-run`, then a one-task plan. Unattended mode usually needs permission flags (a tool allow-list or a non-prompting permission mode) or the agent will wait for approval and be killed by stall detection. Put those in `agentArgs`.
 
 Every agent run also gets these environment variables: `ORBIT_TASK_ID`, `ORBIT_ATTEMPT`, `ORBIT_PROMPT_FILE`, `ORBIT_WORKTREE`.

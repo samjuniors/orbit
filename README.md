@@ -17,7 +17,7 @@ $ orbit run
 [orbit] Run done. Report: .orbit/report.md
 ```
 
-> **Status: v0.3.0, early.** The engine is tested (35+ automated tests on Linux, including real git and a scriptable fake agent), but it has **not yet been run against the real agent CLIs or on Windows/macOS**. Adapter flags come from vendor docs; check them with `orbit doctor` and `<agent> --help`. See [Honest limits](#honest-limits).
+> **Status: v0.4.0, early.** The engine is tested (25 engine tests on Linux, including real git, a pseudo-terminal check of the live display, and a scriptable fake agent), but it has **not yet been run against the real agent CLIs or on Windows/macOS**. Adapter flags come from vendor docs; prove yours with `orbit adapter test <agent>`. See [Honest limits](#honest-limits).
 
 ## Why
 
@@ -34,20 +34,21 @@ Unattended agents fail in boring, expensive ways: they stall on a prompt nobody 
 | Reviewing a pile of changes | One commit per task on its own branch, a report with proof, optional approval after every task. |
 | Context rot over many days | Each task starts a fresh session; continuity comes from the plan, the git history and short notes. |
 
-## Quick start
+## Quick start (first run, safe)
 
-Requires Node 20+ and git. Not on npm yet:
+Needs Node 20+, git, and one coding-agent CLI that is installed and signed in. Not on npm yet:
 
-```bash
-git clone <this repo> && cd orbit && npm link      # gives you the `orbit` command
-cd your-project                                    # any git repo with at least one commit
-orbit init                                         # creates PLAN.md + orbit.policy.json
-$EDITOR PLAN.md orbit.policy.json                  # set your agent and your verify command
-orbit doctor                                       # checks git, the agent CLI, policy, plan
-orbit run --dry-run                                # shows the exact prompt, runs nothing
-orbit run                                          # go make tea
-orbit report                                       # what passed, what needs you, how to review
-```
+1. **Install:** `git clone <this repo> && cd orbit && npm link` (gives you the `orbit` command).
+2. **Go to a project:** `cd your-project` (any git repo with at least one commit; try a throwaway one first).
+3. **Not sure what to do?** Type `orbit`. It looks at the folder and tells you the one next step, every time.
+4. **Set up:** `orbit init`, then open `orbit.policy.json` and set `"agent"` and `"verify"` (the command that proves work is good, e.g. `npm test`).
+5. **Prove your agent works unattended:** `orbit adapter test claude-code` (use your agent's name; `orbit adapters` lists them). It runs one tiny real task in a throwaway folder and tells you what to fix if it stalls on a permission prompt.
+6. **Write the plan:** edit `PLAN.md`. One checkbox per task, small enough to verify.
+7. **Preview:** `orbit run --dry-run` prints the exact prompt the agent would get. Nothing runs.
+8. **Run:** `orbit run`. A short live checklist shows progress. If something needs you, it becomes one card telling you what to do (approvals can be answered right there with `y`/`n`).
+9. **Come back later:** `orbit` shows where things stand, `orbit report` shows what passed with proof. Your own checkout was never touched; merge the `orbit/...` branch when you're happy.
+
+If your computer sleeps or crashes mid-run, run `orbit run` again: it resumes in the same worktree. Use `--plain` for ordinary log lines (CI, logs).
 
 `PLAN.md` is just markdown ([format](docs/WRITING-TASKS.md)):
 
@@ -67,7 +68,7 @@ Append tasks any time, even mid-run; they are picked up. Nothing is ever deleted
 
 ## Commands
 
-`init` · `doctor` · `run [--dry-run] [--verbose]` · `status` · `report` · `approve <id>` · `reject <id> "why"`. Exit codes: `0` all done, `2` a task needs you, `3` stopped by a limit, `1` error.
+`orbit` (what next?) · `init` · `doctor` · `adapters` · `adapter test <agent>` · `run [--dry-run] [--plain] [--verbose]` · `status` · `report` · `approve <id>` · `reject <id> "why"`. Exit codes: `0` all done, `2` a task needs you, `3` stopped by a limit, `1` error.
 
 ## Policy (`orbit.policy.json`)
 
@@ -97,7 +98,7 @@ All state lives in `.orbit/state.json` (git-ignored). No daemon, no account, no 
 
 - **Not a sandbox.** The command guard blocks `git push/merge/pull`, `gh pr/release/api/...` and aliases that disguise them, but an agent can still call a binary by absolute path or use a web API with credentials it can find. Use the agent's own permission settings, and don't leave deploy/push credentials where it can reach them. "Deploy blocked" is enforced by the prompt and the git/gh guard only.
 - **Verification is only as good as your tests.** ORBIT proves "your command passed", not "the feature is right". Weak tests, weak proof.
-- **Agent flags are unverified on real machines** (see status above). Use `agentArgs` or the `generic` adapter to adjust.
+- **Agent flags are unverified on real machines** (see status above). `orbit adapter test` checks them on yours; use `agentArgs` or the `generic` adapter to adjust.
 - **No true session memory.** A resumed task starts a new session and is told what happened; it reads the files. Keep tasks small.
 - **Cost is not metered.** You get attempt, time and task caps, not dollar caps.
 - Sequential only: one task at a time per project.

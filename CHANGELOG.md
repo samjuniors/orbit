@@ -4,6 +4,16 @@ All notable changes to ORBIT Worker are documented here. Format loosely follows 
 ## [Unreleased]
 - Nothing yet.
 
+## [0.4.0] - adapters you can trust, and a calmer terminal
+### Added
+- `orbit adapter test <agent>`: a real end-to-end canary (one tiny task, verified by a script) with plain-language failure hints; `orbit adapters` lists agents and what is installed.
+- Adaptive terminal UI: a compact live checklist that collapses long plans, turns into a single "needs you" card with the next action, and takes approvals inline (`y`/`n`/details). Plain log lines for CI and pipes (`--plain`).
+- `orbit` with no arguments: inspects the folder and prints the one thing to do next.
+- Structured engine events (snapshot, phase, task-done, task-blocked, run-end) and an `io.ask` hook, so other front ends (tray, MCP) can drive the same engine.
+- `docs/RELEASING.md`; `npm run release:patch|minor`.
+### Known gaps
+- Still never run against the real agent CLIs; `orbit adapter test` is how you find out on your machine.
+
 ## [0.3.0] - headless engine
 ### Added
 - `orbit` CLI and zero-dependency engine (`bin/`, `src/engine/`): runs a markdown `PLAN.md` task by task through any coding-agent CLI, one fresh session per task, in an isolated git worktree.
