@@ -19,8 +19,9 @@ function validateReleaseAsset(asset, expectedName, tag) {
     throw new Error(`Invalid or missing release asset: ${expectedName}`);
   }
   const url = assertHttpsUrl(asset.downloadUrl, 'release asset URL');
-  if (!url.pathname.includes(`/releases/download/${encodeURIComponent(tag)}/`)) {
-    throw new Error(`Release asset URL does not match release tag ${tag}.`);
+  if (!/^v(?:0|[1-9][0-9]*)[.](?:0|[1-9][0-9]*)[.](?:0|[1-9][0-9]*)$/.test(tag || '') ||
+      url.pathname !== `/samjuniors/orbit/releases/download/${encodeURIComponent(tag)}/${encodeURIComponent(expectedName)}`) {
+    throw new Error(`Release asset URL does not match repository, asset name, or release tag ${tag}.`);
   }
   return asset;
 }
