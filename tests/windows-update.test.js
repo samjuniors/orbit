@@ -25,8 +25,8 @@ test('schedules the PowerShell helper with literal paths containing spaces', () 
   }, { __allowNonWindowsTest: true });
   try {
     const result = scheduleWindowsReplacement({
-      newPath: 'C:\Program Files\ORBIT\orbit.exe.download',
-      currentPath: 'C:\Program Files\ORBIT\orbit.exe',
+      newPath: String.raw`C:\Program Files\ORBIT\orbit.exe.download`,
+      currentPath: String.raw`C:\Program Files\ORBIT\orbit.exe`,
       expectedVersion: '0.8.0',
       parentPid: 1234,
       spawnFn: fakeSpawn,
