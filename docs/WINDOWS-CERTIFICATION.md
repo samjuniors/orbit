@@ -19,6 +19,14 @@ The CLI installer test also verifies that user data outside the installation dir
 
 A green workflow certifies the exact commit tested on the GitHub-hosted Windows image shown in that run. The `windows-latest` label moves over time; use the recorded OS edition, version, and build in the run log rather than interpreting this as certification for every Windows release.
 
+### Latest successful certification
+
+- Run: [Windows certification workflow](https://github.com/samjuniors/orbit/actions/runs/39583767435)
+- Observed OS: Microsoft Windows Server 2025 Datacenter, build 26100.
+- CLI executable and Inno Setup build/test toolchain: Node.js 22.
+- Legacy desktop/tray build/test toolchain: Node.js 24.
+- Result: both CLI/installer and desktop/tray jobs passed, including updater replacement and rollback integration.
+
 The installer workflow currently tests a clean install, same-version repair/reinstall, and uninstall. It does **not** claim a version-to-version upgrade from a previously published CLI release until a prior supported release installer is available and that specific upgrade path is exercised. This is a separate acceptance item, not inferred from reinstall coverage.
 
 These checks do not certify Authenticode signing, SmartScreen reputation, antivirus vendor allow-listing, domain-managed device policy, or every Windows permission/UAC configuration. Unsigned distribution remains subject to Windows security warnings.
