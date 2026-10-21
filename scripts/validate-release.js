@@ -2,7 +2,7 @@
 
 function validateReleaseMetadata({ packageVersion, lockVersion, changelog, expectedTag, tagsAtHead }) {
   const errors = [];
-  const stableSemver = /^(0|[1-9]\\d*)\\.(0|[1-9]\\d*)\\.(0|[1-9]\\d*)$/;
+  const stableSemver = /^(0|[1-9]\d*)\.(0|[1-9]\d*)\.(0|[1-9]\d*)$/;
 
   if (!stableSemver.test(packageVersion || '')) {
     errors.push(`package.json version "${packageVersion}" is not a stable MAJOR.MINOR.PATCH version.`);
@@ -20,7 +20,7 @@ function validateReleaseMetadata({ packageVersion, lockVersion, changelog, expec
   }
 
   const changelogVersion = changelog
-    ? changelog.match(/^## \\[(\\d+\\.\\d+\\.\\d+)\\](?:\\s|$)/m)?.[1]
+    ? changelog.match(/^## \[(\d+\.\d+\.\d+)\](?:\s|$)/m)?.[1]
     : null;
   if (!changelogVersion) {
     errors.push('CHANGELOG.md has no released version heading.');
@@ -29,7 +29,7 @@ function validateReleaseMetadata({ packageVersion, lockVersion, changelog, expec
   }
 
   if (errors.length) {
-    throw new Error(`Release version validation failed:\\n- ${errors.join('\\n- ')}`);
+    throw new Error(`Release version validation failed:\n- ${errors.join('\n- ')}`);
   }
 
   return { version: packageVersion, tag: canonicalTag };
@@ -60,7 +60,7 @@ if (require.main === module) {
       lockVersion: lock.version,
       changelog: fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8'),
       expectedTag: `v${pkg.version}`,
-      tagsAtHead: tagResult.stdout.split(/\\r?\\n/).filter(Boolean)
+      tagsAtHead: tagResult.stdout.split(/\r?\n/).filter(Boolean)
     });
     console.log(`Release metadata is consistent: ${result.tag}`);
   } catch (error) {
