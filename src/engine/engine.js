@@ -133,19 +133,21 @@ async function runTask(ctx, task) {
       const inv = buildInvocation(policy, { prompt, cwd: wt });
       log(`${task.id} attempt ${ts.attempts}/${lim.maxAttempts}: running ${policy.agent}`);
       phase('agent');
-      res = await runProcess({ exe: inv.exe, args: inv.args, cwd: wt, env: { ...guard.env, ORBIT_AGENT_RUN: '1', ORBIT_TASK_ID: task.id, ORBIT_ATTEMPT: String(ts.attempts), ORBIT_PROMPT_FILE: promptFile, ORBIT_WORKTREE: wt }, timeoutMs: lim.taskTimeoutMin * 60000, stallMs: lim.stallMin * 60000, onOutput: io.onOutput });
+      res = await runProcess({ exe: inv.exe, args: inv.args, cwd: wt, env: { ...guard.env, ORBIT_AGENT_RUN: '1', ORBIT_TASK_ID: task.id, ORBIT_ATTEMPT: String(ts.attempts), ORBIT_PROMPT_FILE: promptFile, ORBIT_WORKTREE: wt }, timeoutMs: lim.taskTimeoutMin * 60000, stallMs: lim.stallMin * 60000, onOutput: io.onOutput, structuredOutput: policy.agent === 'antigravity', onStructuredEvent: event => emit(io, { ...event, taskId: task.id, attempt: ts.attempts }) });
     } finally { guard.cleanup(); fs.rmSync(promptFile, { force: true }); }
 
     const text = tail(`${res.stdout}\n${res.stderr}`);
-    if (res.spawnError || res.code !== 0 || res.timedOut || res.stalled) {
-      if (!res.timedOut && !res.stalled && RATE_LIMIT_RE.test(text) && ts.rateLimitWaits < lim.maxRateLimitWaits) {
+    const structuredStatus = String(res.structuredResult?.status || '').toUpperCase();
+    const structuredFailure = Boolean(structuredStatus && structuredStatus !== 'SUCCESS');
+    if (res.spawnError || res.code !== 0 || res.timedOut || res.stalled || structuredFailure || res.structuredRateLimited) {
+      if (!res.timedOut && !res.stalled && (res.structuredRateLimited || RATE_LIMIT_RE.test(text)) && ts.rateLimitWaits < lim.maxRateLimitWaits) {
         ts.rateLimitWaits++; ts.attempts--; ts.status = 'running'; save();
         log(`${task.id}: the agent hit a rate/usage limit. Waiting ${lim.rateLimitWaitMin} min before trying again (wait ${ts.rateLimitWaits}/${lim.maxRateLimitWaits}). This does not count as a failed attempt.`);
         phase('rate-wait', { minutes: lim.rateLimitWaitMin });
         await io.sleep(lim.rateLimitWaitMin * 60000);
         continue;
       }
-      ts.lastError = res.timedOut ? `The agent ran longer than the ${lim.taskTimeoutMin} minute limit and was stopped.\n${text}` : res.stalled ? `The agent produced no output for ${lim.stallMin} minutes and was stopped (it was probably waiting for input).\n${text}` : `The agent exited with code ${res.code}.\n${res.spawnError || ''}\n${text}`;
+      ts.lastError = res.timedOut ? `The agent ran longer than the ${lim.taskTimeoutMin} minute limit and was stopped.\n${text}` : res.stalled ? `The agent produced no output for ${lim.stallMin} minutes and was stopped (it was probably waiting for input).\n${text}` : structuredFailure ? `The agent reported structured terminal status ${structuredStatus}.${res.structuredResult?.error ? ` ${res.structuredResult.error}` : ''}\n${text}` : `The agent exited with code ${res.code}.\n${res.spawnError || ''}\n${text}`;
       log(`${task.id}: attempt ${ts.attempts} failed (${res.timedOut ? 'timeout' : res.stalled ? 'stalled' : 'exit ' + res.code}).`); save(); continue;
     }
 

@@ -63,6 +63,10 @@ function createUi({ out = process.stdout, input = process.stdin, plain = false, 
     event(e) {
       if (e.type === 'snapshot') { Object.assign(model, { title: e.title, branch: e.branch, worktree: e.worktree, tasks: e.tasks }); start(); }
       else if (e.type === 'phase') { if (!model.current || model.current.id !== e.id || model.current.attempt !== e.attempt) model.current = { id: e.id, attempt: e.attempt, max: e.max, startedAt: now() }; model.current.phase = e.phase; model.attention = null; }
+      else if (e.type === 'agent-progress') {
+        const detail = e.tool?.name ? `Tool: ${e.tool.name}` : String(e.textDelta || '').trim();
+        if (detail) model.note = detail.slice(-140);
+      }
       else if (e.type === 'task-blocked') model.attention = blockedCard(e);
       if (live) draw();
     },
