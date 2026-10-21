@@ -13,7 +13,7 @@ Append-only: finished phases are never rewritten; new asks become new phases or 
 - (0.4.x) Parse structured agent output (stream-json) for live progress and rate-limit detection.
 - First real runs against Claude Code, Codex, Antigravity, OpenCode, Grok Build; fix flags.
 
-## 0.5 "Where people already are"
+## 0.5 "Where people already are" (skill, MCP, add: done in 0.5.0; plugin marketplace packaging, notifications and Linear/GitHub import remain)
 - Skill/plugin wrappers (Claude Code plugin, Codex skill, `AGENTS.md` snippet) that let you say "run orbit on this plan" from inside the agent, and install in one line.
 - Small stdio MCP server: `orbit_status`, `orbit_report`, `orbit_add_task`, `orbit_approve`, `orbit_reject`.
 - Notifications (ntfy/Telegram/webhook command) for "needs you" and "done".

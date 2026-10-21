@@ -133,7 +133,7 @@ async function runTask(ctx, task) {
       const inv = buildInvocation(policy, { prompt, cwd: wt });
       log(`${task.id} attempt ${ts.attempts}/${lim.maxAttempts}: running ${policy.agent}`);
       phase('agent');
-      res = await runProcess({ exe: inv.exe, args: inv.args, cwd: wt, env: { ...guard.env, ORBIT_TASK_ID: task.id, ORBIT_ATTEMPT: String(ts.attempts), ORBIT_PROMPT_FILE: promptFile, ORBIT_WORKTREE: wt }, timeoutMs: lim.taskTimeoutMin * 60000, stallMs: lim.stallMin * 60000, onOutput: io.onOutput });
+      res = await runProcess({ exe: inv.exe, args: inv.args, cwd: wt, env: { ...guard.env, ORBIT_AGENT_RUN: '1', ORBIT_TASK_ID: task.id, ORBIT_ATTEMPT: String(ts.attempts), ORBIT_PROMPT_FILE: promptFile, ORBIT_WORKTREE: wt }, timeoutMs: lim.taskTimeoutMin * 60000, stallMs: lim.stallMin * 60000, onOutput: io.onOutput });
     } finally { guard.cleanup(); fs.rmSync(promptFile, { force: true }); }
 
     const text = tail(`${res.stdout}\n${res.stderr}`);

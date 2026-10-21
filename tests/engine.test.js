@@ -235,3 +235,55 @@ test('adapter test: passes for a working agent and explains each way it can fail
   if (!missing.checks[0].ok) assert.equal(missing.ok, false);
   delete process.env.ORBIT_FAKE_MODE;
 });
+
+const { createHandler, TOOLS } = require('../src/engine/mcp');
+const { addTask } = require('../src/engine/ops');
+const CLI = path.join(__dirname, '..', 'bin', 'orbit.js');
+const rpc = (h, method, params, id = 1) => h({ jsonrpc: '2.0', id, method, params });
+const text = r => r.result.content[0].text;
+
+test('mcp: handshake, tool list, and read-only tools work like a normal MCP server', () => {
+  const r = makeRepo(PLAN2); const h = createHandler({ root: r.root, env: {} });
+  const init = rpc(h, 'initialize', { protocolVersion: '2025-03-26' });
+  assert.equal(init.result.protocolVersion, '2025-03-26'); assert.equal(init.result.serverInfo.name, 'orbit');
+  assert.equal(h({ jsonrpc: '2.0', method: 'notifications/initialized' }), null);
+  assert.deepEqual(rpc(h, 'tools/list').result.tools.map(t => t.name), TOOLS.map(t => t.name));
+  assert.match(text(rpc(h, 'tools/call', { name: 'orbit_status', arguments: {} })), /T1: First thing/);
+  assert.match(text(rpc(h, 'tools/call', { name: 'orbit_next', arguments: {} })), /tasks? to do/);
+  assert.equal(rpc(h, 'nope').error.code, -32601);
+  assert.equal(rpc(h, 'tools/call', { name: 'nope' }).error.code, -32602);
+});
+test('mcp: add_task appends only; approve/reject write the decision files', () => {
+  const r = makeRepo(PLAN2); const h = createHandler({ root: r.root, env: {} });
+  assert.match(text(rpc(h, 'tools/call', { name: 'orbit_add_task', arguments: { title: 'Ship it', details: 'line a\nline b' } })), /Added T3/);
+  const plan = fs.readFileSync(path.join(r.root, 'PLAN.md'), 'utf8');
+  assert.ok(plan.startsWith(PLAN2)); assert.match(plan, /- \[ \] Ship it\n {2}line a\n {2}line b\n$/);
+  rpc(h, 'tools/call', { name: 'orbit_reject', arguments: { id: 'T1', reason: 'too slow' } });
+  assert.equal(fs.readFileSync(path.join(paths(r.root).approvals, 'T1.reject'), 'utf8'), 'too slow');
+  const bad = rpc(h, 'tools/call', { name: 'orbit_approve', arguments: { id: 'ZZ' } });
+  assert.equal(bad.result.isError, true);
+});
+test('mcp: an agent that ORBIT launched cannot approve, reject or add tasks', async () => {
+  const r = makeRepo(PLAN2); const h = createHandler({ root: r.root, env: { ORBIT_AGENT_RUN: '1' } });
+  for (const [name, args] of [['orbit_approve', { id: 'T1' }], ['orbit_reject', { id: 'T1', reason: 'x' }], ['orbit_add_task', { title: 'sneaky' }]]) {
+    const res = rpc(h, 'tools/call', { name, arguments: args }); assert.equal(res.result.isError, true); assert.match(text(res), /disabled inside an ORBIT-run agent/);
+  }
+  assert.throws(() => addTask({ root: r.root, title: 'x', env: { ORBIT_AGENT_RUN: '1' } }), /disabled/);
+  assert.equal(fs.existsSync(paths(r.root).approvals), false);
+  assert.match(text(rpc(h, 'tools/call', { name: 'orbit_status', arguments: {} })), /T1/); // read-only still works
+  // and the engine really does mark agent runs
+  await runPlan({ root: r.root, policy: policy(), io });
+  assert.ok(r.calls().length > 0);
+});
+test('cli: orbit mcp speaks JSON-RPC over stdio; orbit add and install-skill work', () => {
+  const r = makeRepo(PLAN2);
+  const out = spawnSync(process.execPath, [CLI, 'mcp', '--dir', r.root], { input: '{"jsonrpc":"2.0","id":1,"method":"tools/list"}\n{"jsonrpc":"2.0","id":2,"method":"tools/call","params":{"name":"orbit_status","arguments":{}}}\n', encoding: 'utf8' });
+  const lines = out.stdout.trim().split('\n').map(JSON.parse); assert.equal(lines.length, 2); assert.equal(lines[0].result.tools.length, 6); assert.match(lines[1].result.content[0].text, /T2: Second thing/);
+  assert.match(spawnSync(process.execPath, [CLI, 'add', 'Third', 'some detail', '--dir', r.root], { encoding: 'utf8', env: { ...process.env, ORBIT_AGENT_RUN: '' } }).stdout, /Added T3/);
+  const inst = spawnSync(process.execPath, [CLI, 'install-skill', '--agents-md', '--dir', r.root], { encoding: 'utf8' });
+  assert.match(inst.stdout, /Installed the ORBIT skill/);
+  const skill = fs.readFileSync(path.join(r.root, '.claude', 'skills', 'orbit', 'SKILL.md'), 'utf8');
+  assert.match(skill, /^---\nname: orbit\ndescription: .+\n---/); assert.match(fs.readFileSync(path.join(r.root, 'AGENTS.md'), 'utf8'), /ORBIT_TASK_ID/);
+  spawnSync(process.execPath, [CLI, 'install-skill', '--agents-md', '--dir', r.root]); // idempotent
+  assert.equal((fs.readFileSync(path.join(r.root, 'AGENTS.md'), 'utf8').match(/<!-- orbit -->/g) || []).length, 1);
+});

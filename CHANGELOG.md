@@ -4,6 +4,16 @@ All notable changes to ORBIT Worker are documented here. Format loosely follows 
 ## [Unreleased]
 - Nothing yet.
 
+## [0.5.0] - use it from your agent
+### Added
+- `orbit mcp`: a zero-dependency MCP server over stdio with tools to read next step, status and report, append tasks, and approve/reject.
+- `orbit install-skill` (project or `--global`) installs a Claude Code skill; `--agents-md` adds a short ORBIT section to AGENTS.md. Skill source in `integrations/`.
+- `orbit add "title" [details]`: append a task from the command line.
+- Self-approval protection: agents launched by ORBIT run with `ORBIT_AGENT_RUN=1`; approve, reject and add-task refuse to run in that environment (CLI and MCP).
+- `docs/INTEGRATIONS.md`.
+### Known gaps
+- MCP server and skill are tested against a simulated client and the documented file format, not yet against every real client.
+
 ## [0.4.0] - adapters you can trust, and a calmer terminal
 ### Added
 - `orbit adapter test <agent>`: a real end-to-end canary (one tiny task, verified by a script) with plain-language failure hints; `orbit adapters` lists agents and what is installed.

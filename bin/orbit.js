@@ -9,6 +9,9 @@ const { runAdapterTest } = require('../src/engine/adapter-test');
 const { createUi } = require('../src/engine/ui');
 const { nextStep } = require('../src/engine/next');
 const readline = require('node:readline');
+const os = require('node:os');
+const { addTask } = require('../src/engine/ops');
+const { serve } = require('../src/engine/mcp');
 const { paths, loadState } = require('../src/engine/state');
 const { killAll } = require('../src/engine/process');
 const { spawnSync } = require('node:child_process');
@@ -20,11 +23,14 @@ Usage: orbit <command> [options]
   (no command)         look at this folder and tell you the one thing to do next
   init                 create PLAN.md and orbit.policy.json in this folder
   doctor               check git, the agent CLI, your policy and your plan
+  add "title" [details]  append a task to PLAN.md (never edits finished ones)
   adapters             list supported agents and which are installed here
   adapter test <agent> run one tiny real task to prove that agent works unattended here
   run [--dry-run]      work through the plan task by task (resumes automatically)
   status               show where the current run is
   report               print the latest report (also saved to .orbit/report.md)
+  mcp                  serve orbit to an AI assistant over MCP (stdio)
+  install-skill        add the ORBIT skill for Claude Code (--global for all projects, --agents-md for Codex-style agents)
   approve <id>         approve a task that is waiting for you (policy.approval: each-task)
   reject <id> [why]    send a task back to the agent with your feedback
 
@@ -33,7 +39,7 @@ Options: --dir <folder>  --plan <file> (default PLAN.md)  --policy <file> (defau
 Exit codes: 0 all done, 2 a task needs you, 3 stopped by a limit, 1 error.`;
 
 function parseArgs(argv) {
-  const o = { _: [], dir: process.cwd(), plan: 'PLAN.md', policy: 'orbit.policy.json', verbose: false, dryRun: false, plain: false, yes: false };
+  const o = { _: [], dir: process.cwd(), plan: 'PLAN.md', policy: 'orbit.policy.json', verbose: false, dryRun: false, plain: false, yes: false, global: false, agentsMd: false };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === '--dir') o.dir = path.resolve(argv[++i]);
@@ -42,6 +48,8 @@ function parseArgs(argv) {
     else if (a === '--verbose') o.verbose = true;
     else if (a === '--dry-run') o.dryRun = true;
     else if (a === '--plain') o.plain = true;
+    else if (a === '--global') o.global = true;
+    else if (a === '--agents-md') o.agentsMd = true;
     else if (a === '--yes' || a === '-y') o.yes = true;
     else if (a === '-h' || a === '--help') o.help = true;
     else if (a === '-v' || a === '--version') o.version = true;
@@ -111,6 +119,25 @@ async function main() {
   if (!cmd) { console.log(nextStep({ root: o.dir, planFile: o.plan, policyFile: o.policy }).join('\n')); return 0; }
   if (cmd === 'init') { init(o); return 0; }
   if (cmd === 'doctor') return doctor(o);
+  if (cmd === 'mcp') { await serve({ root: o.dir, planFile: o.plan, policyFile: o.policy }); return 0; }
+  if (cmd === 'add') {
+    if (!o._[1]) { console.error('Usage: orbit add "task title" ["details"]'); return 1; }
+    const id = addTask({ root: o.dir, planFile: o.plan, title: o._[1], details: o._.slice(2).join('\n') });
+    console.log(`Added ${id}: ${o._[1]}`); return 0;
+  }
+  if (cmd === 'install-skill') {
+    const src = path.join(__dirname, '..', 'integrations', 'claude-code', 'orbit', 'SKILL.md');
+    const dest = path.join(o.global ? path.join(os.homedir(), '.claude', 'skills', 'orbit') : path.join(o.dir, '.claude', 'skills', 'orbit'), 'SKILL.md');
+    fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.copyFileSync(src, dest);
+    console.log(`Installed the ORBIT skill at ${dest}\nRestart your Claude Code session so it is picked up.`);
+    if (o.agentsMd) {
+      const f = path.join(o.dir, 'AGENTS.md'), marker = '<!-- orbit -->';
+      const cur = fs.existsSync(f) ? fs.readFileSync(f, 'utf8') : '';
+      if (cur.includes(marker)) console.log('AGENTS.md already mentions ORBIT.');
+      else { fs.appendFileSync(f, `${cur && !cur.endsWith('\n') ? '\n' : ''}\n${marker}\n## ORBIT\nFor long multi-task builds use the \`orbit\` CLI (run \`orbit\` with no arguments for the next step). If ORBIT_TASK_ID is set, ORBIT launched you: just do your task. Never run \`orbit approve\`/\`orbit reject\` for work you did; ask the user.\n`); console.log('Added an ORBIT section to AGENTS.md'); }
+    }
+    return 0;
+  }
   if (cmd === 'adapters') {
     let pol = {}; try { pol = loadPolicy(path.join(o.dir, o.policy)); } catch {}
     for (const a of listAdapters(pol)) console.log(`${a.id === 'generic' ? '  -  ' : a.path ? ' yes ' : '  no '} ${a.id.padEnd(12)} ${a.label}${a.path ? '  (' + a.path + ')' : ''}\n       ${a.hint}`);

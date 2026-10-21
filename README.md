@@ -17,7 +17,7 @@ $ orbit run
 [orbit] Run done. Report: .orbit/report.md
 ```
 
-> **Status: v0.4.0, early.** The engine is tested (25 engine tests on Linux, including real git, a pseudo-terminal check of the live display, and a scriptable fake agent), but it has **not yet been run against the real agent CLIs or on Windows/macOS**. Adapter flags come from vendor docs; prove yours with `orbit adapter test <agent>`. See [Honest limits](#honest-limits).
+> **Status: v0.5.0, early.** The engine is tested (29 engine tests on Linux, including real git, a pseudo-terminal check of the live display, and a scriptable fake agent), but it has **not yet been run against the real agent CLIs or on Windows/macOS**. Adapter flags come from vendor docs; prove yours with `orbit adapter test <agent>`. See [Honest limits](#honest-limits).
 
 ## Why
 
@@ -68,7 +68,7 @@ Append tasks any time, even mid-run; they are picked up. Nothing is ever deleted
 
 ## Commands
 
-`orbit` (what next?) · `init` · `doctor` · `adapters` · `adapter test <agent>` · `run [--dry-run] [--plain] [--verbose]` · `status` · `report` · `approve <id>` · `reject <id> "why"`. Exit codes: `0` all done, `2` a task needs you, `3` stopped by a limit, `1` error.
+`orbit` (what next?) · `init` · `doctor` · `adapters` · `adapter test <agent>` · `run [--dry-run] [--plain] [--verbose]` · `status` · `report` · `add "title"` · `approve <id>` · `reject <id> "why"` · `mcp` · `install-skill`. Exit codes: `0` all done, `2` a task needs you, `3` stopped by a limit, `1` error.
 
 ## Policy (`orbit.policy.json`)
 
@@ -84,6 +84,10 @@ Append tasks any time, even mid-run; they are picked up. Nothing is ever deleted
 ```
 
 Set `"approval": "each-task"` and ORBIT commits each task, then waits for `orbit approve T1` or `orbit reject T1 "why"` (the agent gets your feedback). Full reference: [docs/POLICY.md](docs/POLICY.md). Supported agents and how to add one: [docs/ADAPTERS.md](docs/ADAPTERS.md).
+
+## Use it from inside your agent
+
+`orbit install-skill` adds an ORBIT skill for Claude Code (`--global` for every project, `--agents-md` for Codex-style agents), and `orbit mcp` is an MCP server so an assistant can check progress, add tasks and relay your approvals. An agent that ORBIT itself launched can never approve its own work. Setup and safety notes: [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
 
 ## How it works
 
