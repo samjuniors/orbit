@@ -15,14 +15,20 @@ function createReplacementScript() {
   [string]$ScriptPath
 )
 $ErrorActionPreference = 'Stop'
+$logRoot = Join-Path $env:LOCALAPPDATA 'ORBIT'
+New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
+$logPath = Join-Path $logRoot 'update-status.log'
+Add-Content -LiteralPath $logPath -Value ("{0:u} Helper started; waiting for PID {1}; current={2}; new={3}" -f (Get-Date), $ParentPid, $CurrentPath, $NewPath)
 try {
   while (Get-Process -Id $ParentPid -ErrorAction SilentlyContinue) {
     Start-Sleep -Milliseconds 250
   }
+  Add-Content -LiteralPath $logPath -Value ("{0:u} Parent process exited." -f (Get-Date))
   if (Test-Path -LiteralPath $BackupPath) {
     throw "Recovery backup already exists: $BackupPath"
   }
   Move-Item -LiteralPath $CurrentPath -Destination $BackupPath
+  Add-Content -LiteralPath $logPath -Value ("{0:u} Previous executable backed up." -f (Get-Date))
   try {
     Move-Item -LiteralPath $NewPath -Destination $CurrentPath
     $actualVersion = (& $CurrentPath --version 2>&1 | Out-String).Trim()
@@ -30,6 +36,7 @@ try {
       throw "Replacement health check failed. Expected $ExpectedVersion; got $actualVersion."
     }
     Remove-Item -LiteralPath $BackupPath -Force
+    Add-Content -LiteralPath $logPath -Value ("{0:u} Replacement succeeded: {1}" -f (Get-Date), $ExpectedVersion)
     exit 0
   } catch {
     $replacementError = $_
@@ -42,9 +49,7 @@ try {
     throw $replacementError
   }
 } catch {
-  $logRoot = Join-Path $env:LOCALAPPDATA 'ORBIT'
-  New-Item -ItemType Directory -Path $logRoot -Force | Out-Null
-  Add-Content -LiteralPath (Join-Path $logRoot 'update-status.log') -Value ("{0:u} Update failed: {1}" -f (Get-Date), $_)
+  Add-Content -LiteralPath $logPath -Value ("{0:u} Update failed: {1}" -f (Get-Date), $_)
   exit 1
 } finally {
   if ($ScriptPath -and (Test-Path -LiteralPath $ScriptPath)) {
