@@ -75,6 +75,7 @@ function scheduleWindowsReplacement({
   }
   const scriptPath = path.join(tempDir, `orbit-update-${process.pid}-${Date.now()}.ps1`);
   fs.writeFileSync(scriptPath, createReplacementScript(), { flag: 'wx' });
+  const launchLogPath = scriptPath + '.launch.log';
   try {
     const child = spawnFn('powershell.exe', [
       '-NoProfile', '-NonInteractive', '-ExecutionPolicy', 'Bypass', '-WindowStyle', 'Hidden',
@@ -86,12 +87,16 @@ function scheduleWindowsReplacement({
       '-ExpectedVersion', expectedVersion,
       '-ScriptPath', scriptPath
     ], { detached: true, stdio: 'ignore', windowsHide: true });
+    fs.writeFileSync(launchLogPath, `spawn pid=${child.pid || 'none'}\\n`);
+    if (typeof child.on === 'function') child.on('error', error => {
+      try { fs.appendFileSync(launchLogPath, `spawn error: ${error.message}\\n`); } catch {}
+    });
     child.unref();
   } catch (error) {
     try { fs.unlinkSync(scriptPath); } catch {}
     throw error;
   }
-  return { scheduled: true, scriptPath, backupPath };
+  return { scheduled: true, scriptPath, backupPath, launchLogPath };
 }
 
 module.exports = { createReplacementScript, scheduleWindowsReplacement };
