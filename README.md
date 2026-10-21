@@ -17,17 +17,11 @@ $ orbit run
 [orbit] Run done. Report: .orbit/report.md
 ```
 
-> **Status: v0.7.0, early.** The engine is tested (40 tests including real git, a pseudo-terminal check of the live display, and a scriptable fake agent). Adapter flags come from vendor docs; prove yours with `orbit adapter test <agent>`.
+> **Status: early preview.** The CLI/engine version is tracked in the root `package.json`; the legacy desktop app is versioned independently in `apps/tray/package.json`. The engine is tested (40 tests including real git, a pseudo-terminal check of the live display, and a scriptable fake agent). Adapter flags come from vendor docs; prove yours with `orbit adapter test <agent>`.
 
 ## Downloads & Releases
 
-Official pre-built Windows packages are published on [GitHub Releases (v0.7.0)](https://github.com/samjuniors/orbit/releases/tag/v0.7.0):
-
-| Package | Description | Size | Direct Download |
-|---|---|---|---|
-| **ORBIT Desktop GUI** | Full visual application (interactive tasks, live runner, canary suite) | ~89 MB | [📥 **Orbit-Desktop-Setup-0.7.0.exe**](https://github.com/samjuniors/orbit/releases/download/v0.7.0/Orbit-Desktop-Setup-0.7.0.exe) |
-| **ORBIT CLI Setup Wizard** | Traditional Windows setup, automatic `PATH`, uninstaller, auto-update | ~23 MB | [📥 **Orbit-Setup-0.7.0.exe**](https://github.com/samjuniors/orbit/releases/download/v0.7.0/Orbit-Setup-0.7.0.exe) |
-| **Single-File Engine** | Standalone Node SEA executable (zero dependencies, no Node required) | ~89 MB | [📥 **orbit.exe**](https://github.com/samjuniors/orbit/releases/download/v0.7.0/orbit.exe) |
+Official pre-built Windows packages are published on [GitHub Releases](https://github.com/samjuniors/orbit/releases/latest). Open the latest release to choose the CLI installer, standalone executable, or legacy desktop installer. Asset names are versioned with their respective package metadata.
 
 Both installers configure Windows shortcuts and support in-app self-updating via `orbit update`.
 
