@@ -26,7 +26,7 @@ function validateReleaseAsset(asset, expectedName, tag) {
 }
 
 function validateManifestEntry(manifest, { tag, assetName, assetSize }) {
-  if (!manifest || manifest.schemaVersion !== 1 || manifest.tag !== tag || !Array.isArray(manifest.artifacts)) {
+  if (!manifest || manifest.schemaVersion !== 1 || manifest.tag !== tag || !/^[a-f0-9]{40}$/i.test(manifest.sourceCommit || '') || !Array.isArray(manifest.artifacts)) {
     throw new Error('Release manifest is invalid or does not match the selected release.');
   }
   const entries = manifest.artifacts.filter(item => item && item.name === assetName);
