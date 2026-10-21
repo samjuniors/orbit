@@ -23,7 +23,7 @@ $ orbit run
 
 Official pre-built Windows packages are published on [GitHub Releases](https://github.com/samjuniors/orbit/releases/latest). Open the latest release to choose the CLI installer, standalone executable, or legacy desktop installer. Asset names are versioned with their respective package metadata.
 
-Both installers configure Windows shortcuts and support in-app self-updating via `orbit update`.
+The CLI installer configures PATH, Start Menu shortcuts, and an uninstaller. The legacy desktop/tray installer is a separate Electron application with its own install lifecycle. See [Windows certification](docs/WINDOWS-CERTIFICATION.md) for the tested boundaries.
 
 ## Why
 
