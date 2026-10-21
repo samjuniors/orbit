@@ -18,6 +18,8 @@ const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ORBIT updater certification 
 const currentPath = path.join(root, 'orbit current.exe');
 const newPath = path.join(root, 'orbit new.exe');
 const backupPath = currentPath + '.old';
+const updaterLog = path.join(process.env.LOCALAPPDATA || os.tmpdir(), 'ORBIT', 'update-status.log');
+try { fs.rmSync(updaterLog, { force: true }); } catch {}
 
 function delay(ms) { return new Promise(resolve => setTimeout(resolve, ms)); }
 
@@ -45,7 +47,13 @@ async function main() {
 
   const parent = startParent();
   scheduleWindowsReplacement({ newPath, currentPath, expectedVersion, parentPid: parent.pid });
-  await waitFor(() => !fs.existsSync(newPath) && !fs.existsSync(backupPath), 'successful replacement and backup cleanup');
+  try {
+    await waitFor(() => !fs.existsSync(newPath) && !fs.existsSync(backupPath), 'successful replacement and backup cleanup');
+  } catch (error) {
+    console.error('Updater helper log:', fs.existsSync(updaterLog) ? fs.readFileSync(updaterLog, 'utf8') : '(no helper log created)');
+    console.error('Updater scripts:', fs.readdirSync(os.tmpdir()).filter(name => name.startsWith('orbit-update-')));
+    throw error;
+  }
   const installedVersion = spawnSync(currentPath, ['--version'], { encoding: 'utf8' });
   if (installedVersion.status !== 0 || installedVersion.stdout.trim() !== expectedVersion) {
     throw new Error('Windows updater did not install the verified executable.');
