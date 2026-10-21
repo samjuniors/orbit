@@ -60,7 +60,7 @@ function writeVerifiedDownload(filePath, bytes) {
 }
 
 function replaceWithRollback({ newPath, currentPath, backupPath, rename = fs.renameSync, exists = fs.existsSync, remove = fs.unlinkSync, healthCheck }) {
-  if (exists(backupPath)) remove(backupPath);
+  if (exists(backupPath)) throw new Error(`Recovery backup already exists at ${backupPath}; refusing to overwrite it.`);
   rename(currentPath, backupPath);
   try {
     rename(newPath, currentPath);
