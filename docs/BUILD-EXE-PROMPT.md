@@ -1,6 +1,6 @@
 # Prompt: build and test the Windows exe (paste into your coding agent)
 
-Run this after the repo is at v0.7.0 or newer (the build script arrives in 0.7.0).
+Run this from a clean checkout that contains the current single-file executable build scripts.
 
 ```
 Build and test the ORBIT single-file executable. Do not change any source file. If something fails, stop and report

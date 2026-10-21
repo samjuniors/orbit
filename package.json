@@ -20,14 +20,15 @@
   ],
   "scripts": {
     "test": "node scripts/run-tests.js",
-    "check": "node --check bin/orbit.js && node --check src/engine/plan.js && node --check src/engine/policy.js && node --check src/engine/guard.js && node --check src/engine/adapters.js && node --check src/engine/process.js && node --check src/engine/state.js && node --check src/engine/report.js && node --check src/engine/engine.js && node --check src/engine/adapter-test.js && node --check src/engine/ui.js && node --check src/engine/next.js && node --check src/engine/ops.js && node --check src/engine/mcp.js && node --check src/engine/setup.js && node --check src/engine/update.js && node --check scripts/bundle.js && node --check scripts/build-exe.js && node --check scripts/build-installer.js && node --check scripts/publish-release.js && node --check scripts/run-tests.js",
+    "check": "node --check bin/orbit.js && node --check src/engine/plan.js && node --check src/engine/policy.js && node --check src/engine/guard.js && node --check src/engine/adapters.js && node --check src/engine/process.js && node --check src/engine/state.js && node --check src/engine/report.js && node --check src/engine/engine.js && node --check src/engine/adapter-test.js && node --check src/engine/ui.js && node --check src/engine/next.js && node --check src/engine/ops.js && node --check src/engine/mcp.js && node --check src/engine/setup.js && node --check src/engine/update.js && node --check scripts/bundle.js && node --check scripts/build-exe.js && node --check scripts/build-installer.js && node --check scripts/publish-release.js && node --check scripts/run-tests.js && node --check scripts/validate-release.js && node --check scripts/copy-tray-installer.js",
     "test:tray": "npm --prefix apps/tray test",
     "release:patch": "npm version patch -m \"v%s\"",
     "release:minor": "npm version minor -m \"v%s\"",
     "build:exe": "node scripts/build-exe.js",
     "build:installer": "node scripts/build-installer.js",
-    "build:gui": "npm --prefix apps/tray run dist:win && node -e \"const fs = require('fs'); fs.copyFileSync('apps/tray/release/Orbit-Desktop-Setup-0.7.0.exe', 'dist/Orbit-Desktop-Setup.exe'); console.log('Copied installer to dist/Orbit-Desktop-Setup.exe');\"",
-    "publish:release": "node scripts/publish-release.js"
+    "build:gui": "npm --prefix apps/tray run dist:win && node scripts/copy-tray-installer.js",
+    "publish:release": "node scripts/publish-release.js",
+    "validate:release": "node scripts/validate-release.js"
   },
   "devDependencies": {
     "innosetup-compiler": "^6.3.1"

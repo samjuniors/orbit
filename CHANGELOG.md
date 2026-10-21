@@ -1,5 +1,5 @@
 # Changelog
-All notable changes to ORBIT Worker are documented here. Format loosely follows [Keep a Changelog](https://keepachangelog.com/); versioning is [SemVer](https://semver.org/) (MAJOR.MINOR.PATCH) once this leaves preview.
+All notable changes to ORBIT are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). The CLI/engine release version follows the pre-1.0 policy in [docs/RELEASING.md](docs/RELEASING.md); the root package.json is canonical.
 
 ## [Unreleased]
 - Nothing yet.
