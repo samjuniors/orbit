@@ -26,7 +26,7 @@ function inspectReleaseArtifacts(files) {
 }
 
 function createReleaseMetadata({ tag, commit, nodeVersion, platform, artifacts }) {
-  if (!/^v(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)\\.(?:0|[1-9][0-9]*)$/.test(tag || '')) {
+  if (!/^v(?:0|[1-9][0-9]*)[.](?:0|[1-9][0-9]*)[.](?:0|[1-9][0-9]*)$/.test(tag || '')) {
     throw new Error(`Invalid canonical release tag: ${tag}`);
   }
   if (!/^[0-9a-f]{40}$/i.test(commit || '')) {
