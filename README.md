@@ -17,7 +17,7 @@ $ orbit run
 [orbit] Run done. Report: .orbit/report.md
 ```
 
-> **Status: v0.6.0, early.** The engine is tested (34 engine tests on Linux, including real git, a pseudo-terminal check of the live display, and a scriptable fake agent), but it has **not yet been run against the real agent CLIs or on Windows/macOS**. Adapter flags come from vendor docs; prove yours with `orbit adapter test <agent>`. See [Honest limits](#honest-limits).
+> **Status: v0.7.0, early.** The engine is tested (35 engine tests on Linux, including real git, a pseudo-terminal check of the live display, and a scriptable fake agent), but it has **not yet been run against the real agent CLIs or on Windows/macOS**. Adapter flags come from vendor docs; prove yours with `orbit adapter test <agent>`. See [Honest limits](#honest-limits).
 
 ## Why
 
@@ -82,6 +82,10 @@ Append tasks any time, even mid-run; they are picked up. Nothing is ever deleted
 ```
 
 Set `"approval": "each-task"` and ORBIT commits each task, then waits for `orbit approve T1` or `orbit reject T1 "why"` (the agent gets your feedback). Full reference: [docs/POLICY.md](docs/POLICY.md). Supported agents and how to add one: [docs/ADAPTERS.md](docs/ADAPTERS.md).
+
+## No Node? Build a single exe
+
+`npm run build:exe` makes `dist\orbit.exe` (bundles Node). See [docs/BUILDING-EXE.md](docs/BUILDING-EXE.md). Maintainers upgrading from patch files can use [docs/UPGRADE-PROMPT.md](docs/UPGRADE-PROMPT.md); [docs/BUILD-EXE-PROMPT.md](docs/BUILD-EXE-PROMPT.md) has the exe build prompt for an agent.
 
 ## Use it from inside your agent
 

@@ -339,3 +339,15 @@ test('cli: orbit setup --yes refuses when no test command can be detected, and w
   const ok = spawnSync(process.execPath, [CLI, 'setup', '--yes', '--dir', d], { encoding: 'utf8' }); assert.equal(ok.status, 0); assert.match(ok.stdout, /All set/);
   assert.equal(JSON.parse(fs.readFileSync(path.join(d, 'orbit.policy.json'), 'utf8')).verify, 'npm test');
 });
+
+test('single-file bundle: runs without the source tree, passes git flags through, and still enforces the guard', () => {
+  const { bundle } = require('../scripts/bundle');
+  const out = path.join(os.tmpdir(), `orbit-bundle-${process.pid}.cjs`);
+  fs.writeFileSync(out, bundle(path.join(__dirname, '..', 'bin', 'orbit.js'), path.join(__dirname, '..')));
+  const env = { ...process.env, ORBIT_ALLOW: '{}', ORBIT_REAL_GIT: 'git' };
+  assert.equal(spawnSync(process.execPath, [out, '--version'], { encoding: 'utf8' }).stdout.trim(), require('../package.json').version);
+  assert.equal(spawnSync(process.execPath, [out, '__guard', 'git', '-C', '.', 'push'], { encoding: 'utf8', env }).status, BLOCK_EXIT);
+  const pass = spawnSync(process.execPath, [out, '__guard', 'git', '--version'], { encoding: 'utf8', env });
+  assert.equal(pass.status, 0); assert.match(pass.stdout, /git version/);
+  fs.rmSync(out, { force: true });
+});

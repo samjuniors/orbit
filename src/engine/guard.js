@@ -56,20 +56,29 @@ function decide(tool, argv, allow) {
   return { ok: true };
 }
 
+// How a shim re-launches ORBIT's own guard: `<exe> [bin/orbit.js] __guard <tool> args...`.
+// From a packaged single-file exe there is no script path, so the exe itself is the entry point.
+function launchPrefix() {
+  let sea = false;
+  try { sea = require('node:sea').isSea(); } catch {}
+  return sea ? [process.execPath, '__guard'] : [process.execPath, path.join(__dirname, '..', '..', 'bin', 'orbit.js'), '__guard'];
+}
+const winQuote = s => `"${s.replace(/"/g, '""')}"`;
+const shQuote = s => `'${s.replace(/'/g, `'\\''`)}'`;
+
 // Writes shims into a fresh temp dir and returns env additions for the agent.
 function buildGuard({ realGit, realGh, allow, root = os.tmpdir() }) {
   const dir = fs.mkdtempSync(path.join(root, 'orbit-guard-'));
   const win = process.platform === 'win32';
+  const prefix = launchPrefix();
   const make = (name) => {
-    if (win) fs.writeFileSync(path.join(dir, `${name}.cmd`), `@echo off\r\n"%ORBIT_NODE%" "%ORBIT_GUARD_JS%" ${name} %*\r\nexit /b %ERRORLEVEL%\r\n`);
-    else { const f = path.join(dir, name); fs.writeFileSync(f, `#!/bin/sh\nexec "$ORBIT_NODE" "$ORBIT_GUARD_JS" ${name} "$@"\n`); fs.chmodSync(f, 0o755); }
+    if (win) fs.writeFileSync(path.join(dir, `${name}.cmd`), `@echo off\r\n${prefix.map(winQuote).join(' ')} ${name} %*\r\nexit /b %ERRORLEVEL%\r\n`);
+    else { const f = path.join(dir, name); fs.writeFileSync(f, `#!/bin/sh\nexec ${prefix.map(shQuote).join(' ')} ${name} "$@"\n`); fs.chmodSync(f, 0o755); }
   };
   make('git');
   if (realGh) make('gh');
   const env = {
     PATH: `${dir}${path.delimiter}${process.env.PATH || ''}`,
-    ORBIT_NODE: process.execPath,
-    ORBIT_GUARD_JS: __filename,
     ORBIT_REAL_GIT: realGit,
     ORBIT_REAL_GH: realGh || '',
     ORBIT_ALLOW: JSON.stringify(allow)
@@ -77,8 +86,8 @@ function buildGuard({ realGit, realGh, allow, root = os.tmpdir() }) {
   return { dir, env, cleanup() { try { fs.rmSync(dir, { recursive: true, force: true }); } catch {} } };
 }
 
-function main() {
-  const [tool, ...argv] = process.argv.slice(2);
+function main(args = process.argv.slice(2)) {
+  const [tool, ...argv] = args;
   const real = tool === 'gh' ? process.env.ORBIT_REAL_GH : process.env.ORBIT_REAL_GIT;
   let allow = { push: false, merge: false, pr: false };
   try { allow = { ...allow, ...JSON.parse(process.env.ORBIT_ALLOW || '{}') }; } catch {}
@@ -90,4 +99,4 @@ function main() {
 }
 
 if (require.main === module) main();
-module.exports = { decide, gitSubcommand, buildGuard, BLOCK_EXIT };
+module.exports = { decide, gitSubcommand, buildGuard, main, BLOCK_EXIT };

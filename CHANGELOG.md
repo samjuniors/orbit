@@ -4,6 +4,16 @@ All notable changes to ORBIT Worker are documented here. Format loosely follows 
 ## [Unreleased]
 - Nothing yet.
 
+## [0.7.0] - single-file exe, agent upgrade prompts
+### Added
+- `npm run build:exe`: builds `dist/orbit.exe` (Node single-executable app) with a dependency-free bundler (`scripts/bundle.js`); smoke-tests the version and the git guard.
+- `docs/UPGRADE-PROMPT.md`: a prompt for your coding agent to apply the newest patch(es) from a patch folder in version order, test, push a branch and open a PR (or merge and tag).
+- `docs/BUILD-EXE-PROMPT.md` and `docs/BUILDING-EXE.md`.
+### Changed
+- The git/gh guard shims re-launch ORBIT through a hidden `__guard` command instead of a script path, so they work from the packaged exe. The skill text is embedded as an exe asset.
+### Known gaps
+- The exe inject step (`postject`) and the final exe are untested on Windows by the author; unsigned exes may trigger SmartScreen.
+
 ## [0.6.0] - guided setup
 ### Added
 - `orbit setup`: a five-step guided wizard (git, agent, test command, review style, first task) that writes `orbit.policy.json` and `PLAN.md`, keeps settings you already customised, never overwrites an existing plan, and can run the adapter test at the end. `--yes` accepts defaults (and refuses if no test command can be detected).

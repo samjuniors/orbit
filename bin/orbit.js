@@ -13,6 +13,7 @@ const os = require('node:os');
 const { addTask } = require('../src/engine/ops');
 const { serve } = require('../src/engine/mcp');
 const { runSetup } = require('../src/engine/setup');
+const { main: guardMain } = require('../src/engine/guard');
 const { paths, loadState } = require('../src/engine/state');
 const { killAll } = require('../src/engine/process');
 const { spawnSync } = require('node:child_process');
@@ -113,7 +114,16 @@ function status(o) {
   return 0;
 }
 
+// The skill text ships inside the packaged exe as an asset; from source it is read from disk.
+function readSkill() {
+  try { const sea = require('node:sea'); if (sea.isSea()) return sea.getAsset('SKILL.md', 'utf8'); } catch {}
+  return fs.readFileSync(path.join(__dirname, '..', 'integrations', 'claude-code', 'orbit', 'SKILL.md'), 'utf8');
+}
+
 async function main() {
+  // Internal: the git/gh guard shims call back into orbit here. Handled before option parsing so
+  // git's own flags (-v, -h, -y ...) are passed through untouched.
+  if (process.argv[2] === '__guard') return guardMain(process.argv.slice(3));
   const o = parseArgs(process.argv.slice(2));
   const cmd = o._[0];
   if (o.version) { console.log(pkg.version); return 0; }
@@ -138,9 +148,8 @@ async function main() {
     console.log(`Added ${id}: ${o._[1]}`); return 0;
   }
   if (cmd === 'install-skill') {
-    const src = path.join(__dirname, '..', 'integrations', 'claude-code', 'orbit', 'SKILL.md');
     const dest = path.join(o.global ? path.join(os.homedir(), '.claude', 'skills', 'orbit') : path.join(o.dir, '.claude', 'skills', 'orbit'), 'SKILL.md');
-    fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.copyFileSync(src, dest);
+    fs.mkdirSync(path.dirname(dest), { recursive: true }); fs.writeFileSync(dest, readSkill());
     console.log(`Installed the ORBIT skill at ${dest}\nRestart your Claude Code session so it is picked up.`);
     if (o.agentsMd) {
       const f = path.join(o.dir, 'AGENTS.md'), marker = '<!-- orbit -->';
