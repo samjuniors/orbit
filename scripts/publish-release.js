@@ -6,6 +6,7 @@ const pkg = require('../package.json');
 const trayPkg = require('../apps/tray/package.json');
 const packageLock = require('../package-lock.json');
 const { validateReleaseMetadata } = require('./validate-release');
+const { inspectReleaseArtifacts, createReleaseMetadata } = require('./release-artifacts');
 
 function getGitHubToken() {
   const envToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
@@ -135,6 +136,26 @@ async function main() {
     { path: path.resolve(__dirname, '../dist/orbit.exe'), name: 'orbit.exe' }
   ];
 
+  // Fail closed: every declared installer/binary must exist and contain bytes.
+  const artifacts = inspectReleaseArtifacts(filesToUpload);
+  const commitResult = spawnSync('git', ['rev-parse', 'HEAD'], { cwd: root, encoding: 'utf8' });
+  if (commitResult.status !== 0) throw new Error('Could not resolve the source commit for release provenance.');
+  const metadata = createReleaseMetadata({
+    tag,
+    commit: commitResult.stdout.trim(),
+    nodeVersion: process.version,
+    platform: process.platform,
+    artifacts
+  });
+  const checksumPath = path.join(root, 'dist', 'SHA256SUMS.txt');
+  const manifestPath = path.join(root, 'dist', 'release-manifest.json');
+  fs.writeFileSync(checksumPath, metadata.checksumText);
+  fs.writeFileSync(manifestPath, metadata.manifestText);
+  filesToUpload.push(
+    { path: checksumPath, name: 'SHA256SUMS.txt' },
+    { path: manifestPath, name: 'release-manifest.json' }
+  );
+
   // Refresh release data to get current assets
   const currentRelease = await requestJson(`https://api.github.com/repos/${repo}/releases/${release.id}`, {
     headers: { 'Authorization': `token ${token}` }
@@ -147,8 +168,7 @@ async function main() {
       continue;
     }
     if (!fs.existsSync(file.path)) {
-      console.warn(`File not found: ${file.path}, skipping.`);
-      continue;
+      throw new Error(`Required release asset disappeared before upload: ${file.name}`);
     }
     await uploadAsset(currentRelease.upload_url, file.path, file.name, token);
   }
