@@ -51,7 +51,6 @@ async function main() {
     await waitFor(() => !fs.existsSync(newPath) && !fs.existsSync(backupPath), 'successful replacement and backup cleanup');
   } catch (error) {
     console.error('Updater helper log:', fs.existsSync(updaterLog) ? fs.readFileSync(updaterLog, 'utf8') : '(no helper log created)');
-    console.error('Updater process launch:', fs.existsSync(scheduled.launchLogPath) ? fs.readFileSync(scheduled.launchLogPath, 'utf8') : '(no launch log created)');
     console.error('PowerShell lookup:', spawnSync('where.exe', ['powershell.exe'], { encoding: 'utf8' }));
     console.error('Updater scripts:', fs.readdirSync(os.tmpdir()).filter(name => name.startsWith('orbit-update-')));
     throw error;
