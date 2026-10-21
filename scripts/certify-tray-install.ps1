@@ -17,7 +17,7 @@ Start-Sleep -Seconds 10
 $stillRunning = Get-Process -Id $p.Id -ErrorAction SilentlyContinue
 if (-not $stillRunning) { throw 'Desktop app exited before launch smoke test completed.' }
 Write-Host 'PASS: desktop application process launched and remained active for 10 seconds.'
-Stop-Process -Id $p.Id -Force
+taskkill.exe /PID $p.Id /T /F | Out-Null
 $uninstaller = Get-ChildItem -LiteralPath $installDir -Filter 'Uninstall*.exe' -File | Select-Object -First 1
 if ($uninstaller) {
   & $uninstaller.FullName /S
