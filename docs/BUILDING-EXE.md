@@ -40,7 +40,7 @@ ORBIT includes built-in update detection and self-updating:
   ```powershell
   orbit update
   ```
-  - When running as the packaged Windows `.exe`, it fetches the new release asset and atomically replaces the executable in place.
+  - When running as the packaged Windows `.exe`, it verifies the release asset and stages a deferred replacement helper. The helper waits for the running CLI process to exit, replaces the executable, checks `--version`, and restores the previous executable if the health check fails.
   - When running from a git checkout, it fetches tags and updates the repository.
 - **Passive notifications:**
   When running regular commands like `orbit`, `orbit doctor`, or `orbit status`, ORBIT checks GitHub periodically in the background (cached for 6 hours) and prints a reminder whenever a new version is available:
@@ -48,7 +48,7 @@ ORBIT includes built-in update detection and self-updating:
   * Update available: vX.Y.Z -> vA.B.C. Run 'orbit update' to upgrade.
   ```
 
-## Caveats (be aware)
+Windows install, updater, and legacy desktop certification evidence: [docs/WINDOWS-CERTIFICATION.md](WINDOWS-CERTIFICATION.md). The Windows CI workflow currently certifies same-version installer repair/reinstall, not a cross-version installer upgrade from an earlier published release.\n\n## Caveats (be aware)
 - **Unsigned.** Windows SmartScreen may show "unrecognized app" and some antivirus tools flag any self-extracting Node exe. Code-signing needs a certificate; not included.
 - **Node runtime.** The standalone `orbit.exe` is ~90 MB because it bundles the Node engine; the installer `Orbit-Setup.exe` compresses it down to ~24 MB.
 - **Rebuilding.** You can update at any time with `orbit update` or by running `npm run build:installer`.
