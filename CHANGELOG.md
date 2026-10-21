@@ -5,6 +5,7 @@ All notable changes to ORBIT are documented here. Format follows [Keep a Changel
 - Add a CI-gated Windows release workflow with required-asset validation, SHA-256 checksums, and source-commit provenance.
 - Verify standalone updater downloads against the HTTPS GitHub Release manifest (asset identity, size, and SHA-256) before installation; health-check replacements and preserve rollback backups.
 - Document updater trust assumptions and recovery limitations in `docs/UPDATER-SECURITY.md`.
+- Add Windows-hosted certification for CLI and desktop builds, installer lifecycle, path-with-spaces handling, and deferred updater replacement/rollback; document the remaining cross-version upgrade evidence gap.
 
 ## [0.7.0] - single-file exe, agent upgrade prompts
 ### Added
