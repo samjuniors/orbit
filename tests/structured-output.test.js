@@ -50,3 +50,14 @@ test('consumer callback failures do not break parsing', () => {
   assert.equal(parser.pending, '');
   assert.equal(events.length, 0);
 });
+
+test('preserves UTF-8 characters split between byte chunks', () => {
+  const events = [];
+  const parser = new JsonlEventParser(e => events.push(e));
+  const line = Buffer.from(JSON.stringify({ event: 'step_update', step_update: { text_delta: 'working 🌍' } }) + '\n');
+  const split = line.indexOf(Buffer.from('🌍')) + 2;
+  parser.push(line.subarray(0, split));
+  parser.push(line.subarray(split));
+  parser.end();
+  assert.equal(events[0].textDelta, 'working 🌍');
+});
