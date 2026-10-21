@@ -222,10 +222,18 @@ async function downloadBinary(url, destPath, options = {}) {
 }
 
 function replaceBinary(newBinaryPath, currentBinaryPath = process.execPath, expectedVersion) {
+  if (process.platform === 'win32') {
+    const { scheduleWindowsReplacement } = require('./windows-update');
+    return scheduleWindowsReplacement({
+      newPath: newBinaryPath,
+      currentPath: currentBinaryPath,
+      expectedVersion,
+      parentPid: process.pid
+    });
+  }
   const { replaceWithRollback } = require('./update-security');
-  if (process.platform === 'win32') fs.chmodSync(newBinaryPath, 0o700);
-  else fs.chmodSync(newBinaryPath, 0o755);
-  replaceWithRollback({
+  fs.chmodSync(newBinaryPath, 0o755);
+  return replaceWithRollback({
     newPath: newBinaryPath,
     currentPath: currentBinaryPath,
     backupPath: currentBinaryPath + '.old',
@@ -333,10 +341,16 @@ async function runUpdateCommand({
       say(`Downloading and verifying ${selectedAsset.name}...`);
       await downloadBinary(selectedAsset.downloadUrl, tempFile, { asset: selectedAsset, manifestEntry, fetchFn });
       if (asset) {
-        replaceBinary(tempFile, process.execPath, res.latestVersion);
-        say(`\nSuccessfully upgraded ORBIT to v${res.latestVersion}!`);
-        say(`Executable: ${process.execPath}`);
-        say("Run 'orbit doctor' or 'orbit' to verify.");
+        const replacement = replaceBinary(tempFile, process.execPath, res.latestVersion);
+        if (process.platform === 'win32' && replacement?.scheduled) {
+          say(`\nUpdate verified and staged for v${res.latestVersion}.`);
+          say('ORBIT will replace its executable after this command exits. Open a new terminal and run orbit --version to confirm.');
+          say('If replacement fails, the previous executable is restored; see %LOCALAPPDATA%\\ORBIT\\update-status.log for details.');
+        } else {
+          say(`\nSuccessfully upgraded ORBIT to v${res.latestVersion}!`);
+          say(`Executable: ${process.execPath}`);
+          say("Run 'orbit doctor' or 'orbit' to verify.");
+        }
       } else {
         say(`\nVerified installer downloaded: ${tempFile}`);
         say('Run this installer manually to complete the upgrade. The current installation has not been changed.');
