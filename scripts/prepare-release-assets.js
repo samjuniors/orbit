@@ -25,6 +25,7 @@ try {
     commit: commit.stdout.trim(),
     nodeVersion: process.version,
     platform: process.platform,
+    architecture: process.arch,
     artifacts
   });
   fs.writeFileSync(path.join(dist, 'SHA256SUMS.txt'), metadata.checksumText);
