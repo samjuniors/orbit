@@ -10,8 +10,8 @@ New-Item -ItemType Directory -Path $userData -Force | Out-Null
 Set-Content -LiteralPath $sentinel -Value 'preserve-user-data'
 
 function Install-Orbit {
-  & $InstallerPath /VERYSILENT /SUPPRESSMSGBOXES /NORESTART "/DIR=$installDir" /TASKS=envPath
-  if ($LASTEXITCODE -ne 0) { throw "Inno Setup returned exit code $LASTEXITCODE." }
+  $process = Start-Process -FilePath $InstallerPath -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART',"/DIR=`"$installDir`"","/TASKS=envPath") -Wait -PassThru
+  if ($process.ExitCode -ne 0) { throw "Inno Setup returned exit code $($process.ExitCode)." }
 }
 function Assert-Version {
   $exe = Join-Path $installDir 'orbit.exe'
@@ -41,8 +41,8 @@ Write-Host 'PASS: same-version reinstall and user-data preservation.'
 
 $uninstaller = Join-Path $installDir 'unins000.exe'
 if (-not (Test-Path -LiteralPath $uninstaller)) { throw 'Inno Setup uninstaller missing.' }
-& $uninstaller /VERYSILENT /SUPPRESSMSGBOXES /NORESTART
-if ($LASTEXITCODE -ne 0) { throw "Uninstaller returned exit code $LASTEXITCODE." }
+$uninstallProcess = Start-Process -FilePath $uninstaller -ArgumentList @('/VERYSILENT','/SUPPRESSMSGBOXES','/NORESTART') -Wait -PassThru
+if ($uninstallProcess.ExitCode -ne 0) { throw "Uninstaller returned exit code $($uninstallProcess.ExitCode)." }
 if (Test-Path -LiteralPath (Join-Path $installDir 'orbit.exe')) { throw 'CLI executable remains after uninstall.' }
 if (-not (Test-Path -LiteralPath $sentinel)) { throw 'Uninstall removed user data outside the installation directory.' }
 Write-Host 'PASS: uninstall removes installed CLI while preserving user data.'
