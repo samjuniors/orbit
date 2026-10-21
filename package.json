@@ -28,6 +28,7 @@
     "build:installer": "node scripts/build-installer.js",
     "build:gui": "npm --prefix apps/tray run dist:win && node scripts/copy-tray-installer.js",
     "publish:release": "node scripts/publish-release.js",
+    "prepare:release-assets": "node scripts/prepare-release-assets.js",
     "validate:release": "node scripts/validate-release.js"
   },
   "devDependencies": {
