@@ -27,7 +27,9 @@ test('accepts only HTTPS URLs on approved GitHub download hosts', () => {
 test('validates asset identity and release tag', () => {
   assert.equal(validateReleaseAsset(asset, 'orbit.exe', 'v0.8.0'), asset);
   assert.throws(() => validateReleaseAsset(asset, 'other.exe', 'v0.8.0'), /Invalid/);
-  assert.throws(() => validateReleaseAsset(asset, 'orbit.exe', 'v0.9.0'), /tag/);\n  assert.throws(() => validateReleaseAsset({ ...asset, downloadUrl: 'https://github.com/attacker/orbit/releases/download/v0.8.0/orbit.exe' }, 'orbit.exe', 'v0.8.0'), /repository/);\n  assert.throws(() => validateReleaseAsset({ ...asset, downloadUrl: 'https://github.com/samjuniors/orbit/releases/download/v0.8.0/other.exe' }, 'orbit.exe', 'v0.8.0'), /repository/);
+  assert.throws(() => validateReleaseAsset(asset, 'orbit.exe', 'v0.9.0'), /tag/);
+  assert.throws(() => validateReleaseAsset({ ...asset, downloadUrl: 'https://github.com/attacker/orbit/releases/download/v0.8.0/orbit.exe' }, 'orbit.exe', 'v0.8.0'), /repository/);
+  assert.throws(() => validateReleaseAsset({ ...asset, downloadUrl: 'https://github.com/samjuniors/orbit/releases/download/v0.8.0/other.exe' }, 'orbit.exe', 'v0.8.0'), /repository/);
 });
 
 test('requires matching trusted release manifest entry', () => {
