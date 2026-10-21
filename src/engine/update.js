@@ -209,12 +209,10 @@ function getExecutionMode() {
 }
 
 function cleanupOldBinaries() {
-  if (process.platform === 'win32') {
-    const oldPath = process.execPath + '.old';
-    if (fs.existsSync(oldPath)) {
-      try { fs.unlinkSync(oldPath); } catch {}
-    }
-  }
+  // Never delete a retained backup automatically: it may be the only recovery
+  // copy after a failed rollback. Successful updates remove their backup only
+  // after the replacement executable passes its health check.
+  return false;
 }
 
 async function downloadBinary(url, destPath, options = {}) {
