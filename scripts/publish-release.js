@@ -109,7 +109,7 @@ async function main() {
     lockVersion: packageLock.version,
     changelog: fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8'),
     expectedTag: tag,
-    tagsAtHead: tagResult.stdout.split(/\\r?\\n/).filter(Boolean)
+    tagsAtHead: tagResult.stdout.trim().split(/\r?\n/).filter(Boolean)
   });
   const token = getGitHubToken();
 
