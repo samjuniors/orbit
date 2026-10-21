@@ -2,6 +2,10 @@ const https = require('node:https');
 const fs = require('node:fs');
 const path = require('node:path');
 const { spawnSync } = require('node:child_process');
+const pkg = require('../package.json');
+const trayPkg = require('../apps/tray/package.json');
+const packageLock = require('../package-lock.json');
+const { validateReleaseMetadata } = require('./validate-release');
 
 function getGitHubToken() {
   const envToken = process.env.GITHUB_TOKEN || process.env.GH_TOKEN;
@@ -95,9 +99,19 @@ function uploadAsset(uploadUrlTemplate, filePath, fileName, token) {
 }
 
 async function main() {
-  const token = getGitHubToken();
   const repo = 'samjuniors/orbit';
-  const tag = 'v0.7.0';
+  const root = path.resolve(__dirname, '..');
+  const tag = `v${pkg.version}`;
+  const tagResult = spawnSync('git', ['tag', '--points-at', 'HEAD'], { cwd: root, encoding: 'utf8' });
+  if (tagResult.status !== 0) throw new Error('Could not read Git tags at HEAD.');
+  validateReleaseMetadata({
+    packageVersion: pkg.version,
+    lockVersion: packageLock.version,
+    changelog: fs.readFileSync(path.join(root, 'CHANGELOG.md'), 'utf8'),
+    expectedTag: tag,
+    tagsAtHead: tagResult.stdout.split(/\\r?\\n/).filter(Boolean)
+  });
+  const token = getGitHubToken();
 
   console.log(`Connecting to GitHub (${repo})…`);
 
@@ -107,6 +121,7 @@ async function main() {
     release = await requestJson(`https://api.github.com/repos/${repo}/releases/tags/${tag}`, {
       headers: { 'Authorization': `token ${token}` }
     });
+    if (release.tag_name !== tag) throw new Error(`GitHub Release tag "${release.tag_name}" does not match expected tag "${tag}".`);
     console.log(`Found release: ${release.name} (ID: ${release.id})`);
   } catch (err) {
     console.error('Could not find release for tag', tag, err.message);
@@ -115,8 +130,8 @@ async function main() {
 
   // Files to ensure are present in release
   const filesToUpload = [
-    { path: path.resolve(__dirname, '../dist/Orbit-Desktop-Setup-0.7.0.exe'), name: 'Orbit-Desktop-Setup-0.7.0.exe' },
-    { path: path.resolve(__dirname, '../dist/Orbit-Setup-0.7.0.exe'), name: 'Orbit-Setup-0.7.0.exe' },
+    { path: path.resolve(__dirname, `../dist/Orbit-Desktop-Setup-${trayPkg.version}.exe`), name: `Orbit-Desktop-Setup-${trayPkg.version}.exe` },
+    { path: path.resolve(__dirname, `../dist/Orbit-Setup-${pkg.version}.exe`), name: `Orbit-Setup-${pkg.version}.exe` },
     { path: path.resolve(__dirname, '../dist/orbit.exe'), name: 'orbit.exe' }
   ];
 
