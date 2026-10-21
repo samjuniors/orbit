@@ -7,7 +7,7 @@ const { validateReleaseMetadata } = require('../scripts/validate-release');
 const valid = {
   packageVersion: '0.7.0',
   lockVersion: '0.7.0',
-  changelog: '# Changelog\\n\\n## [Unreleased]\\n- Next\\n\\n## [0.7.0] - Preview\\n',
+  changelog: '# Changelog\n\n## [Unreleased]\n- Next\n\n## [0.7.0] - Preview\n',
   expectedTag: 'v0.7.0',
   tagsAtHead: ['v0.7.0']
 };
@@ -41,7 +41,7 @@ test('release metadata rejects a changelog heading that differs from package ver
   assert.throws(
     () => validateReleaseMetadata({
       ...valid,
-      changelog: '# Changelog\\n\\n## [Unreleased]\\n- Next\\n\\n## [0.6.0] - Old\\n'
+      changelog: '# Changelog\n\n## [Unreleased]\n- Next\n\n## [0.6.0] - Old\n'
     }),
     /Latest CHANGELOG.md version/
   );
@@ -49,7 +49,7 @@ test('release metadata rejects a changelog heading that differs from package ver
 
 test('release metadata rejects missing release headings and non-stable versions', () => {
   assert.throws(
-    () => validateReleaseMetadata({ ...valid, changelog: '# Changelog\\n## [Unreleased]\\n' }),
+    () => validateReleaseMetadata({ ...valid, changelog: '# Changelog\n## [Unreleased]\n' }),
     /no released version heading/
   );
   assert.throws(
