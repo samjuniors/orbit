@@ -7,7 +7,7 @@ const { loadState } = require('./state');
 // `orbit` with no arguments: look at the situation and say the ONE thing to do next.
 function nextStep({ root, planFile = 'PLAN.md', policyFile = 'orbit.policy.json' }) {
   const planPath = path.join(root, planFile);
-  if (!fs.existsSync(planPath)) return ['No plan in this folder yet.', '', 'Start with:  orbit init'];
+  if (!fs.existsSync(planPath)) return ['No plan in this folder yet.', '', 'Start with:  orbit setup     (guided, about a minute)', 'or:          orbit init      (just create the template files)'];
   let policy;
   try { policy = loadPolicy(path.join(root, policyFile)); } catch (e) { return ['Your policy file has a problem:', `  ${e.message}`, '', 'Fix it, then run:  orbit doctor']; }
   let plan;

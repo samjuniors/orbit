@@ -17,7 +17,7 @@ $ orbit run
 [orbit] Run done. Report: .orbit/report.md
 ```
 
-> **Status: v0.5.0, early.** The engine is tested (29 engine tests on Linux, including real git, a pseudo-terminal check of the live display, and a scriptable fake agent), but it has **not yet been run against the real agent CLIs or on Windows/macOS**. Adapter flags come from vendor docs; prove yours with `orbit adapter test <agent>`. See [Honest limits](#honest-limits).
+> **Status: v0.6.0, early.** The engine is tested (34 engine tests on Linux, including real git, a pseudo-terminal check of the live display, and a scriptable fake agent), but it has **not yet been run against the real agent CLIs or on Windows/macOS**. Adapter flags come from vendor docs; prove yours with `orbit adapter test <agent>`. See [Honest limits](#honest-limits).
 
 ## Why
 
@@ -36,17 +36,15 @@ Unattended agents fail in boring, expensive ways: they stall on a prompt nobody 
 
 ## Quick start (first run, safe)
 
-Needs Node 20+, git, and one coding-agent CLI that is installed and signed in. Not on npm yet:
+Needs Node 20+, git, and one coding-agent CLI that is installed and signed in. Not on npm yet.
 
-1. **Install:** `git clone <this repo> && cd orbit && npm link` (gives you the `orbit` command).
-2. **Go to a project:** `cd your-project` (any git repo with at least one commit; try a throwaway one first).
-3. **Not sure what to do?** Type `orbit`. It looks at the folder and tells you the one next step, every time.
-4. **Set up:** `orbit init`, then open `orbit.policy.json` and set `"agent"` and `"verify"` (the command that proves work is good, e.g. `npm test`).
-5. **Prove your agent works unattended:** `orbit adapter test claude-code` (use your agent's name; `orbit adapters` lists them). It runs one tiny real task in a throwaway folder and tells you what to fix if it stalls on a permission prompt.
-6. **Write the plan:** edit `PLAN.md`. One checkbox per task, small enough to verify.
-7. **Preview:** `orbit run --dry-run` prints the exact prompt the agent would get. Nothing runs.
-8. **Run:** `orbit run`. A short live checklist shows progress. If something needs you, it becomes one card telling you what to do (approvals can be answered right there with `y`/`n`).
-9. **Come back later:** `orbit` shows where things stand, `orbit report` shows what passed with proof. Your own checkout was never touched; merge the `orbit/...` branch when you're happy.
+1. **Install the command.** Windows: double-click `scripts/install-windows.cmd`. Anywhere: `npm link` in this folder. (Without it, run `node /path/to/orbit/bin/orbit.js` wherever these steps say `orbit`.)
+2. **Open your project** in any terminal (PowerShell, cmd, Git Bash, macOS/Linux shell). Try a throwaway project first.
+3. **Run `orbit setup`.** A one-minute guided setup: it creates git if missing, finds your agents, suggests your test command, asks how you want to review, and writes the config and a starter `PLAN.md`. It can then test your agent for you.
+4. **Open `PLAN.md`** and make the tasks concrete (one checkbox each, with acceptance criteria).
+5. **Preview:** `orbit run --dry-run` prints the exact prompt the agent would get. Nothing runs.
+6. **Run:** `orbit run`. A short live checklist shows progress. If something needs you it becomes one card telling you what to do (approvals can be answered right there with `y`/`n`).
+7. **Come back later:** type `orbit` for the single next step, `orbit report` for what passed with proof. Your own checkout is never touched; merge the `orbit/...` branch when you're happy.
 
 If your computer sleeps or crashes mid-run, run `orbit run` again: it resumes in the same worktree. Use `--plain` for ordinary log lines (CI, logs).
 
@@ -68,7 +66,7 @@ Append tasks any time, even mid-run; they are picked up. Nothing is ever deleted
 
 ## Commands
 
-`orbit` (what next?) · `init` · `doctor` · `adapters` · `adapter test <agent>` · `run [--dry-run] [--plain] [--verbose]` · `status` · `report` · `add "title"` · `approve <id>` · `reject <id> "why"` · `mcp` · `install-skill`. Exit codes: `0` all done, `2` a task needs you, `3` stopped by a limit, `1` error.
+`orbit` (what next?) · `setup` · `init` · `doctor` · `adapters` · `adapter test <agent>` · `run [--dry-run] [--plain] [--verbose]` · `status` · `report` · `add "title"` · `approve <id>` · `reject <id> "why"` · `mcp` · `install-skill`. Exit codes: `0` all done, `2` a task needs you, `3` stopped by a limit, `1` error.
 
 ## Policy (`orbit.policy.json`)
 

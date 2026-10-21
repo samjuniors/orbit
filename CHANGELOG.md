@@ -4,6 +4,15 @@ All notable changes to ORBIT Worker are documented here. Format loosely follows 
 ## [Unreleased]
 - Nothing yet.
 
+## [0.6.0] - guided setup
+### Added
+- `orbit setup`: a five-step guided wizard (git, agent, test command, review style, first task) that writes `orbit.policy.json` and `PLAN.md`, keeps settings you already customised, never overwrites an existing plan, and can run the adapter test at the end. `--yes` accepts defaults (and refuses if no test command can be detected).
+- Test-command detection from project files (npm, Go, Cargo, pytest).
+- `scripts/install-windows.cmd`: checks Node and git, then installs the `orbit` command.
+- `orbit` with no plan now points to `orbit setup`.
+### Known gaps
+- Still no single-file executable or tray; the real agent CLIs are still unrun.
+
 ## [0.5.0] - use it from your agent
 ### Added
 - `orbit mcp`: a zero-dependency MCP server over stdio with tools to read next step, status and report, append tasks, and approve/reject.

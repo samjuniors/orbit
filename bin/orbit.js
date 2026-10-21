@@ -12,6 +12,7 @@ const readline = require('node:readline');
 const os = require('node:os');
 const { addTask } = require('../src/engine/ops');
 const { serve } = require('../src/engine/mcp');
+const { runSetup } = require('../src/engine/setup');
 const { paths, loadState } = require('../src/engine/state');
 const { killAll } = require('../src/engine/process');
 const { spawnSync } = require('node:child_process');
@@ -21,7 +22,8 @@ const HELP = `orbit ${pkg.version} - run a plan through your coding agent, unatt
 
 Usage: orbit <command> [options]
   (no command)         look at this folder and tell you the one thing to do next
-  init                 create PLAN.md and orbit.policy.json in this folder
+  setup                guided setup: pick your agent, test command and review style (start here)
+  init                 create the template files without asking anything
   doctor               check git, the agent CLI, your policy and your plan
   add "title" [details]  append a task to PLAN.md (never edits finished ones)
   adapters             list supported agents and which are installed here
@@ -118,6 +120,16 @@ async function main() {
   if (o.help || cmd === 'help') { console.log(HELP); return 0; }
   if (!cmd) { console.log(nextStep({ root: o.dir, planFile: o.plan, policyFile: o.policy }).join('\n')); return 0; }
   if (cmd === 'init') { init(o); return 0; }
+  if (cmd === 'setup') {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    let closed = false; rl.on('close', () => { closed = true; });
+    const ask = (id, q, def) => (o.yes || closed ? Promise.resolve(def) : new Promise(res => rl.question(q, a => res(a.trim()))));
+    let pol = {}; try { pol = JSON.parse(fs.readFileSync(path.join(o.dir, o.policy), 'utf8')); } catch {}
+    try {
+      const r = await runSetup({ root: o.dir, planFile: o.plan, policyFile: o.policy, ask, say: m => console.log(m), agents: listAdapters(pol), testAdapter: policy => runAdapterTest({ policy }), interactive: !o.yes });
+      return r.ok ? 0 : 1;
+    } finally { rl.close(); }
+  }
   if (cmd === 'doctor') return doctor(o);
   if (cmd === 'mcp') { await serve({ root: o.dir, planFile: o.plan, policyFile: o.policy }); return 0; }
   if (cmd === 'add') {

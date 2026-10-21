@@ -1,6 +1,6 @@
 {
   "name": "orbit-runner",
-  "version": "0.5.0",
+  "version": "0.6.0",
   "description": "Run a plan through your coding agent (Claude Code, Codex, Antigravity, OpenCode, Grok Build...) unattended, with verification, policy guardrails and a morning report.",
   "license": "MIT",
   "bin": {
@@ -13,13 +13,14 @@
     "bin",
     "src/engine",
     "integrations",
+    "scripts",
     "docs",
     "README.md",
     "LICENSE"
   ],
   "scripts": {
     "test": "node --test tests/*.test.js",
-    "check": "node --check bin/orbit.js && node --check src/engine/plan.js && node --check src/engine/policy.js && node --check src/engine/guard.js && node --check src/engine/adapters.js && node --check src/engine/process.js && node --check src/engine/state.js && node --check src/engine/report.js && node --check src/engine/engine.js && node --check src/engine/adapter-test.js && node --check src/engine/ui.js && node --check src/engine/next.js && node --check src/engine/ops.js && node --check src/engine/mcp.js",
+    "check": "node --check bin/orbit.js && node --check src/engine/plan.js && node --check src/engine/policy.js && node --check src/engine/guard.js && node --check src/engine/adapters.js && node --check src/engine/process.js && node --check src/engine/state.js && node --check src/engine/report.js && node --check src/engine/engine.js && node --check src/engine/adapter-test.js && node --check src/engine/ui.js && node --check src/engine/next.js && node --check src/engine/ops.js && node --check src/engine/mcp.js && node --check src/engine/setup.js",
     "test:tray": "npm --prefix apps/tray test",
     "release:patch": "npm version patch -m \"v%s\"",
     "release:minor": "npm version minor -m \"v%s\""

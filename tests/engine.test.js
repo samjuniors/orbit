@@ -200,7 +200,7 @@ test('ui: when something needs you the screen shows one card with the next actio
 });
 test('next step: says the single right thing for each situation', async () => {
   const empty = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-next-'));
-  assert.match(nextStep({ root: empty }).join('\n'), /orbit init/);
+  assert.match(nextStep({ root: empty }).join('\n'), /orbit setup/);
   const r = makeRepo(PLAN2, { T1: { 1: 'fail', 2: 'fail', 3: 'fail' } });
   fs.writeFileSync(path.join(r.root, 'orbit.policy.json'), JSON.stringify({ agent: 'generic', agentCommand: [process.execPath, FAKE], verify: 'node verify.js' }));
   assert.match(nextStep({ root: r.root }).join('\n'), /2 tasks to do[\s\S]*orbit run/);
@@ -286,4 +286,56 @@ test('cli: orbit mcp speaks JSON-RPC over stdio; orbit add and install-skill wor
   assert.match(skill, /^---\nname: orbit\ndescription: .+\n---/); assert.match(fs.readFileSync(path.join(r.root, 'AGENTS.md'), 'utf8'), /ORBIT_TASK_ID/);
   spawnSync(process.execPath, [CLI, 'install-skill', '--agents-md', '--dir', r.root]); // idempotent
   assert.equal((fs.readFileSync(path.join(r.root, 'AGENTS.md'), 'utf8').match(/<!-- orbit -->/g) || []).length, 1);
+});
+
+const { runSetup, suggestVerify } = require('../src/engine/setup');
+const AGENTS = [{ id: 'claude-code', label: 'Claude Code', path: null }, { id: 'codex', label: 'OpenAI Codex CLI', path: '/bin/codex' }, { id: 'generic', label: 'Custom', path: null }];
+const scripted = (answers) => { const said = []; return { said, ask: async (id, q, def) => (id in answers ? answers[id] : def), say: m => said.push(m) }; };
+
+test('setup: suggests a test command from the project files', () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-sv-'));
+  assert.equal(suggestVerify(d), null);
+  fs.writeFileSync(path.join(d, 'package.json'), JSON.stringify({ scripts: { test: 'echo "Error: no test specified" && exit 1' } })); assert.equal(suggestVerify(d), null);
+  fs.writeFileSync(path.join(d, 'package.json'), JSON.stringify({ scripts: { test: 'vitest' } })); assert.equal(suggestVerify(d), 'npm test');
+  const g = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-sv-')); fs.writeFileSync(path.join(g, 'go.mod'), 'module x'); assert.equal(suggestVerify(g), 'go test ./...');
+});
+test('setup: a brand-new folder ends with git, a policy, a plan with the first task, and .orbit ignored', async () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-setup-')); fs.writeFileSync(path.join(d, 'package.json'), JSON.stringify({ scripts: { test: 'node --test' } }));
+  const io2 = scripted({ agent: '2', review: '2', 'first-task': 'Add a login page' });
+  const r = await runSetup({ root: d, ask: io2.ask, say: io2.say, agents: AGENTS, testAdapter: async () => ({ ok: true, checks: [] }) });
+  assert.equal(r.ok, true);
+  const pol = JSON.parse(fs.readFileSync(path.join(d, 'orbit.policy.json'), 'utf8'));
+  assert.equal(pol.agent, 'codex'); assert.equal(pol.verify, 'npm test'); assert.equal(pol.approval, 'none'); assert.equal(pol.rules['git.push'], 'block');
+  assert.match(fs.readFileSync(path.join(d, 'PLAN.md'), 'utf8'), /- \[ \] Add a login page/);
+  assert.match(fs.readFileSync(path.join(d, '.gitignore'), 'utf8'), /^\.orbit\/$/m);
+  assert.equal(sh(d, 'rev-parse', '--abbrev-ref', 'HEAD').stdout.trim(), 'main'); assert.match(io2.said.join('\n'), /empty first commit/);
+  assert.equal(normalizePolicy(pol).agent, 'codex'); // the file it wrote is a valid policy
+});
+test('setup: defaults to the first installed agent, keeps existing settings, and never overwrites a plan', async () => {
+  const r = makeRepo(PLAN2);
+  fs.writeFileSync(path.join(r.root, 'orbit.policy.json'), JSON.stringify({ agent: 'codex', verify: 'node verify.js', agentArgs: ['--x'], limits: { maxAttempts: 7 }, rules: { 'git.push': 'allow' } }));
+  const io2 = scripted({});
+  await runSetup({ root: r.root, ask: io2.ask, say: io2.say, agents: AGENTS, testAdapter: async () => ({ ok: true, checks: [] }) });
+  const pol = JSON.parse(fs.readFileSync(path.join(r.root, 'orbit.policy.json'), 'utf8'));
+  assert.equal(pol.agent, 'codex'); assert.deepEqual(pol.agentArgs, ['--x']); assert.equal(pol.limits.maxAttempts, 7); assert.equal(pol.rules['git.push'], 'allow'); assert.equal(pol.verify, 'node verify.js');
+  assert.equal(fs.readFileSync(path.join(r.root, 'PLAN.md'), 'utf8'), PLAN2);
+});
+test('setup: refuses to continue without proof unless you say so, and can run the agent test', async () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-setup-')); sh(d, 'init', '-q', '-b', 'main');
+  let calls = 0; const answers = { verify: '', 'no-verify-ok': 'y', 'test-now': 'y', agent: '2' };
+  const io2 = scripted(answers);
+  const r = await runSetup({ root: d, ask: io2.ask, say: io2.say, agents: AGENTS, testAdapter: async () => { calls++; return { ok: false, checks: [{ name: 'runs without waiting for input', ok: false, detail: 'stalled' }], hint: 'add permission flags', errorTail: 'prompt' }; } });
+  assert.equal(JSON.parse(fs.readFileSync(path.join(d, 'orbit.policy.json'), 'utf8')).allowUnverified, true);
+  assert.equal(calls, 1); assert.equal(r.testOk, false); assert.match(io2.said.join('\n'), /FAIL[\s\S]*add permission flags/);
+  const stop = scripted({ 'git-init': 'n' }); const d2 = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-setup-'));
+  assert.equal((await runSetup({ root: d2, ask: stop.ask, say: stop.say, agents: AGENTS, testAdapter: async () => ({}) })).ok, false);
+  const none = await runSetup({ root: d, ask: async (id, q, def) => def, say() {}, agents: AGENTS, testAdapter: async () => ({}), interactive: false });
+  assert.equal(none.ok, true); // d already has a verify (allowUnverified) saved from the run above
+});
+test('cli: orbit setup --yes refuses when no test command can be detected, and works when one can', () => {
+  const d = fs.mkdtempSync(path.join(os.tmpdir(), 'orbit-cli-')); sh(d, 'init', '-q', '-b', 'main');
+  const bad = spawnSync(process.execPath, [CLI, 'setup', '--yes', '--dir', d], { encoding: 'utf8' }); assert.equal(bad.status, 1); assert.match(bad.stdout, /No test command could be detected/);
+  fs.writeFileSync(path.join(d, 'package.json'), JSON.stringify({ scripts: { test: 'node --test' } }));
+  const ok = spawnSync(process.execPath, [CLI, 'setup', '--yes', '--dir', d], { encoding: 'utf8' }); assert.equal(ok.status, 0); assert.match(ok.stdout, /All set/);
+  assert.equal(JSON.parse(fs.readFileSync(path.join(d, 'orbit.policy.json'), 'utf8')).verify, 'npm test');
 });

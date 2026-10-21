@@ -19,7 +19,7 @@ Append-only: finished phases are never rewritten; new asks become new phases or 
 - Notifications (ntfy/Telegram/webhook command) for "needs you" and "done".
 - Task sources as import adapters: Linear and GitHub Issues -> PLAN.md.
 
-## 0.6 "No Node required"
+## 0.6 "No Node required" (guided `orbit setup` and the Windows install script shipped in 0.6.0; executables, schedule windows, budgets, tray remain)
 - Single-file executables (Node SEA) for Windows/macOS/Linux attached to releases.
 - Schedule windows (`--between 09:00-18:00`), spend/time budgets.
 - Tray rebuilt as a thin shell over the engine.
