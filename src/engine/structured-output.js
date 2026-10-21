@@ -1,18 +1,18 @@
 // Incremental NDJSON reader and Antigravity event normalizer.
-// Unknown and malformed records are deliberately non-fatal; raw process output
-// remains the authoritative diagnostic stream.
-const { StringDecoder } = require('node:string_decoder');\n\nconst RATE_LIMIT_RE = /(rate[ _-]?limit|usage limit|quota (exceeded|reached)|too many requests|\\b429\\b|limit reached)/i;
+// Unknown and malformed records are non-fatal; raw stdout/stderr remain available.
+const { StringDecoder } = require('node:string_decoder');
+
+const RATE_LIMIT_RE = /(rate[ _-]?limit|usage limit|quota (exceeded|reached)|too many requests|\b429\b|limit reached)/i;
 
 function normalizeAgentEvent(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
-  const event = value.event;
-  if (typeof event !== 'string') return null;
+  if (typeof value.event !== 'string') return null;
 
-  if (event === 'init') {
+  if (value.event === 'init') {
     return { type: 'agent-init', conversationId: value.conversation_id || value.init?.conversation_id || null };
   }
 
-  if (event === 'step_update') {
+  if (value.event === 'step_update') {
     const step = value.step_update;
     if (!step || typeof step !== 'object' || Array.isArray(step)) return null;
     const text = typeof step.text_delta === 'string' ? step.text_delta : '';
@@ -28,7 +28,7 @@ function normalizeAgentEvent(value) {
     };
   }
 
-  if (event === 'result') {
+  if (value.event === 'result') {
     const result = value.result;
     if (!result || typeof result !== 'object' || Array.isArray(result)) return null;
     const status = typeof result.status === 'string' ? result.status : null;
@@ -50,16 +50,18 @@ class JsonlEventParser {
   constructor(onEvent = () => {}) {
     this.onEvent = onEvent;
     this.pending = '';
+    this.decoder = new StringDecoder('utf8');
   }
 
   push(chunk) {
-    this.pending += Buffer.isBuffer(chunk) ? chunk.toString('utf8') : String(chunk);
-    const lines = this.pending.split(/\\r?\\n/);
+    this.pending += Buffer.isBuffer(chunk) ? this.decoder.write(chunk) : String(chunk);
+    const lines = this.pending.split(/\r?\n/);
     this.pending = lines.pop() ?? '';
     for (const line of lines) this.parseLine(line);
   }
 
   end() {
+    this.pending += this.decoder.end();
     if (this.pending.trim()) this.parseLine(this.pending);
     this.pending = '';
   }
@@ -72,7 +74,7 @@ class JsonlEventParser {
         try { this.onEvent(event); } catch {}
       }
     } catch {
-      // Keep going. The caller also retains the unmodified stdout/stderr.
+      // Preserve forward progress; raw output is retained by the process runner.
     }
   }
 }
