@@ -1,0 +1,20 @@
+# Normalize line endings to LF for cross-platform consistency.
+# Prevents Windows CRLF checkout conversions from generating phantom diffs.
+* text=auto eol=lf
+
+*.js        text eol=lf
+*.mjs       text eol=lf
+*.cjs       text eol=lf
+*.ts        text eol=lf
+*.tsx       text eol=lf
+*.json      text eol=lf
+*.yaml      text eol=lf
+*.yml       text eol=lf
+*.md        text eol=lf
+*.sh        text eol=lf
+Dockerfile  text eol=lf
+
+# PowerShell scripts on Windows expect CRLF
+*.ps1       text eol=crlf
+*.bat       text eol=crlf
+*.cmd       text eol=crlf
