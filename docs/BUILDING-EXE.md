@@ -45,7 +45,7 @@ ORBIT includes built-in update detection and self-updating:
 - **Passive notifications:**
   When running regular commands like `orbit`, `orbit doctor`, or `orbit status`, ORBIT checks GitHub periodically in the background (cached for 6 hours) and prints a reminder whenever a new version is available:
   ```
-  * Update available: v0.7.0 -> v0.8.0. Run 'orbit update' to upgrade.
+  * Update available: vX.Y.Z -> vA.B.C. Run 'orbit update' to upgrade.
   ```
 
 ## Caveats (be aware)
