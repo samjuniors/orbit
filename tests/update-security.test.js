@@ -16,7 +16,7 @@ const asset = {
   downloadUrl: 'https://github.com/samjuniors/orbit/releases/download/v0.8.0/orbit.exe'
 };
 const entry = { name: 'orbit.exe', size: bytes.length, sha256: digest };
-const manifest = { schemaVersion: 1, tag: 'v0.8.0', artifacts: [entry] };
+const manifest = { schemaVersion: 1, tag: 'v0.8.0', sourceCommit: 'a'.repeat(40), artifacts: [entry] };
 
 test('accepts only HTTPS URLs on approved GitHub download hosts', () => {
   assert.equal(assertHttpsUrl(asset.downloadUrl).hostname, 'github.com');
