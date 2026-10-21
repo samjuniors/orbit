@@ -57,6 +57,8 @@ jobs:
         run: npm run build:installer
       - name: Build legacy desktop installer
         run: npm run build:gui
+      - name: Validate required assets and generate checksums/provenance
+        run: node scripts/prepare-release-assets.js
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
