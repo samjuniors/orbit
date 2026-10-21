@@ -48,7 +48,9 @@ ORBIT includes built-in update detection and self-updating:
   * Update available: vX.Y.Z -> vA.B.C. Run 'orbit update' to upgrade.
   ```
 
-Windows install, updater, and legacy desktop certification evidence: [docs/WINDOWS-CERTIFICATION.md](WINDOWS-CERTIFICATION.md). The Windows CI workflow currently certifies same-version installer repair/reinstall, not a cross-version installer upgrade from an earlier published release.\n\n## Caveats (be aware)
+Windows install, updater, and legacy desktop certification evidence: [docs/WINDOWS-CERTIFICATION.md](WINDOWS-CERTIFICATION.md). The Windows CI workflow currently certifies same-version installer repair/reinstall, not a cross-version installer upgrade from an earlier published release.
+
+## Caveats (be aware)
 - **Unsigned.** Windows SmartScreen may show "unrecognized app" and some antivirus tools flag any self-extracting Node exe. Code-signing needs a certificate; not included.
 - **Node runtime.** The standalone `orbit.exe` is ~90 MB because it bundles the Node engine; the installer `Orbit-Setup.exe` compresses it down to ~24 MB.
 - **Rebuilding.** You can update at any time with `orbit update` or by running `npm run build:installer`.
