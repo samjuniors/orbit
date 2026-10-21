@@ -3,7 +3,7 @@ $ErrorActionPreference = 'Stop'
 $installDir = Join-Path $env:RUNNER_TEMP 'ORBIT Desktop Certification Path With Spaces'
 Write-Host "Windows runner: $((Get-CimInstance Win32_OperatingSystem).Caption) build $((Get-CimInstance Win32_OperatingSystem).BuildNumber)"
 Write-Host 'Installing legacy desktop/tray app silently...'
-$installProcess = Start-Process -FilePath $InstallerPath -ArgumentList @('/S',"/D=`"$installDir`"") -Wait -PassThru
+$installProcess = Start-Process -FilePath $InstallerPath -ArgumentList "/S /D=$installDir" -Wait -PassThru
 if ($installProcess.ExitCode -ne 0) { throw "NSIS installer returned exit code $($installProcess.ExitCode)." }
 $exe = Join-Path $installDir 'ORBIT Desktop.exe'
 if (-not (Test-Path -LiteralPath $exe)) {
