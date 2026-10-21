@@ -209,40 +209,31 @@ function getExecutionMode() {
 }
 
 function cleanupOldBinaries() {
-  if (process.platform === 'win32') {
-    const oldPath = process.execPath + '.old';
-    if (fs.existsSync(oldPath)) {
-      try { fs.unlinkSync(oldPath); } catch {}
-    }
-  }
+  // Never delete a retained backup automatically: it may be the only recovery
+  // copy after a failed rollback. Successful updates remove their backup only
+  // after the replacement executable passes its health check.
+  return false;
 }
 
-async function downloadBinary(url, destPath) {
-  const res = await globalThis.fetch(url, { headers: { 'User-Agent': 'orbit-cli' } });
-  if (!res.ok) throw new Error(`Download failed: HTTP ${res.status} ${res.statusText}`);
-  const ab = await res.arrayBuffer();
-  fs.writeFileSync(destPath, Buffer.from(ab));
+async function downloadBinary(url, destPath, options = {}) {
+  const { downloadVerifiedAsset, writeVerifiedDownload } = require('./update-security');
+  const bytes = await downloadVerifiedAsset(options);
+  writeVerifiedDownload(destPath, bytes);
 }
 
-function replaceBinary(newBinaryPath, currentBinaryPath = process.execPath) {
-  if (process.platform === 'win32') {
-    const backup = currentBinaryPath + '.old';
-    if (fs.existsSync(backup)) {
-      try { fs.unlinkSync(backup); } catch {}
+function replaceBinary(newBinaryPath, currentBinaryPath = process.execPath, expectedVersion) {
+  const { replaceWithRollback } = require('./update-security');
+  if (process.platform === 'win32') fs.chmodSync(newBinaryPath, 0o700);
+  else fs.chmodSync(newBinaryPath, 0o755);
+  replaceWithRollback({
+    newPath: newBinaryPath,
+    currentPath: currentBinaryPath,
+    backupPath: currentBinaryPath + '.old',
+    healthCheck: filePath => {
+      const check = spawnSync(filePath, ['--version'], { encoding: 'utf8', timeout: 10000 });
+      return check.status === 0 && (check.stdout || '').trim() === expectedVersion;
     }
-    fs.renameSync(currentBinaryPath, backup);
-    try {
-      fs.renameSync(newBinaryPath, currentBinaryPath);
-    } catch (e) {
-      // Rollback
-      try { fs.renameSync(backup, currentBinaryPath); } catch {}
-      throw e;
-    }
-    try { fs.unlinkSync(backup); } catch {}
-  } else {
-    fs.chmodSync(newBinaryPath, 0o755);
-    fs.renameSync(newBinaryPath, currentBinaryPath);
-  }
+  });
 }
 
 function getUpdateNotice(currentVersion) {
@@ -268,14 +259,15 @@ async function runUpdateCommand({
   yes = false,
   force = true,
   ask,
-  say = console.log
+  say = console.log,
+  fetchFn = globalThis.fetch
 }) {
   cleanupOldBinaries();
   say(`Checking for updates (current version: v${currentVersion})...`);
 
   let res;
   try {
-    res = await checkUpdate({ currentVersion, force });
+    res = await checkUpdate({ currentVersion, force, fetchFn });
   } catch (err) {
     say(`FAIL  Could not check for updates: ${err.message}`);
     return 1;
@@ -319,21 +311,35 @@ async function runUpdateCommand({
       }
     }
 
-    const downloadUrl = asset ? asset.downloadUrl : installerAsset.downloadUrl;
-    say(`Downloading ${asset ? asset.name : installerAsset.name}...`);
+    const selectedAsset = asset || installerAsset;
+    const { validateReleaseAsset, validateManifestEntry } = require('./update-security');
+    const manifestAsset = res.assets.find(a => a.name === 'release-manifest.json');
     const tempFile = process.execPath + '.download';
 
     try {
-      await downloadBinary(downloadUrl, tempFile);
+      validateReleaseAsset(selectedAsset, selectedAsset.name, res.tag);
+      if (!manifestAsset) throw new Error('Trusted release-manifest.json is missing; refusing an unverified update.');
+      validateReleaseAsset(manifestAsset, 'release-manifest.json', res.tag);
+      const manifestResponse = await fetchFn(manifestAsset.downloadUrl, { headers: { 'User-Agent': 'orbit-cli' } });
+      if (!manifestResponse.ok) throw new Error(`Could not fetch release manifest: HTTP ${manifestResponse.status}.`);
+      if (manifestResponse.url) require('./update-security').assertHttpsUrl(manifestResponse.url, 'manifest download URL');
+      const manifest = await manifestResponse.json();
+      const manifestEntry = validateManifestEntry(manifest, {
+        tag: res.tag,
+        assetName: selectedAsset.name,
+        assetSize: selectedAsset.size
+      });
+      if (fs.existsSync(tempFile)) fs.unlinkSync(tempFile);
+      say(`Downloading and verifying ${selectedAsset.name}...`);
+      await downloadBinary(selectedAsset.downloadUrl, tempFile, { asset: selectedAsset, manifestEntry, fetchFn });
       if (asset) {
-        replaceBinary(tempFile, process.execPath);
+        replaceBinary(tempFile, process.execPath, res.latestVersion);
         say(`\nSuccessfully upgraded ORBIT to v${res.latestVersion}!`);
         say(`Executable: ${process.execPath}`);
         say("Run 'orbit doctor' or 'orbit' to verify.");
-      } else if (installerAsset) {
-        say(`\nDownloaded installer: ${tempFile}`);
-        say('Running setup wizard to complete the upgrade...');
-        spawn(tempFile, [], { detached: true, stdio: 'ignore' }).unref();
+      } else {
+        say(`\nVerified installer downloaded: ${tempFile}`);
+        say('Run this installer manually to complete the upgrade. The current installation has not been changed.');
       }
       return 0;
     } catch (e) {
