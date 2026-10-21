@@ -25,7 +25,7 @@ function inspectReleaseArtifacts(files) {
   return inspected;
 }
 
-function createReleaseMetadata({ tag, commit, nodeVersion, platform, artifacts }) {
+function createReleaseMetadata({ tag, commit, nodeVersion, platform, architecture, artifacts }) {
   if (!/^v(?:0|[1-9][0-9]*)[.](?:0|[1-9][0-9]*)[.](?:0|[1-9][0-9]*)$/.test(tag || '')) {
     throw new Error(`Invalid canonical release tag: ${tag}`);
   }
@@ -40,7 +40,7 @@ function createReleaseMetadata({ tag, commit, nodeVersion, platform, artifacts }
     schemaVersion: 1,
     tag,
     sourceCommit: commit,
-    build: { nodeVersion, platform },
+    build: { nodeVersion, platform, architecture },
     artifacts: artifacts.map(({ name, size, sha256 }) => ({ name, size, sha256 }))
   };
   return { checksumText, manifestText: JSON.stringify(manifest, null, 2) + '\n' };
