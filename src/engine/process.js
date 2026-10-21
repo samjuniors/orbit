@@ -32,12 +32,13 @@ function runProcess({ exe, args = [], cwd, env = {}, timeoutMs = 0, stallMs = 0,
     try { child = spawn(command, commandArgs, { cwd, env: fullEnv, shell, windowsHide: true, detached: process.platform !== 'win32', stdio: ['ignore', 'pipe', 'pipe'] }); }
     catch (err) { resolve({ code: null, stdout: '', stderr: err.message, timedOut: false, stalled: false, durationMs: 0, spawnError: err.message }); return; }
     live.add(child);
-    let stdout = '', stderr = '', timedOut = false, stalled = false, done = false, stallTimer = null, structuredRateLimited = false;
+    let stdout = '', stderr = '', timedOut = false, stalled = false, done = false, stallTimer = null, structuredRateLimited = false, structuredResult = null;
     const parser = structuredOutput ? new (require('./structured-output').JsonlEventParser)(event => {
       if (event.rateLimited) structuredRateLimited = true;
+      if (event.type === 'agent-result') structuredResult = event;
       try { onStructuredEvent?.(event); } catch {}
     }) : null;
-    const finish = (code, extra = {}) => { if (done) return; done = true; live.delete(child); clearTimeout(hardTimer); clearTimeout(stallTimer); parser?.end(); resolve({ code, stdout, stderr, timedOut, stalled, structuredRateLimited, durationMs: Date.now() - started, ...extra }); };
+    const finish = (code, extra = {}) => { if (done) return; done = true; live.delete(child); clearTimeout(hardTimer); clearTimeout(stallTimer); parser?.end(); resolve({ code, stdout, stderr, timedOut, stalled, structuredRateLimited, structuredResult, durationMs: Date.now() - started, ...extra }); };
     const hardTimer = timeoutMs > 0 ? setTimeout(() => { timedOut = true; killTree(child); }, timeoutMs) : null;
     const armStall = () => { if (!(stallMs > 0)) return; clearTimeout(stallTimer); stallTimer = setTimeout(() => { stalled = true; killTree(child); }, stallMs); };
     armStall();
