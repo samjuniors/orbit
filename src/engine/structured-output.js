@@ -1,7 +1,7 @@
 // Incremental NDJSON reader and Antigravity event normalizer.
 // Unknown and malformed records are deliberately non-fatal; raw process output
 // remains the authoritative diagnostic stream.
-const RATE_LIMIT_RE = /(rate[ _-]?limit|usage limit|quota (exceeded|reached)|too many requests|\\b429\\b|limit reached)/i;
+const { StringDecoder } = require('node:string_decoder');\n\nconst RATE_LIMIT_RE = /(rate[ _-]?limit|usage limit|quota (exceeded|reached)|too many requests|\\b429\\b|limit reached)/i;
 
 function normalizeAgentEvent(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
