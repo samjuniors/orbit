@@ -145,6 +145,7 @@ async function main() {
     commit: commitResult.stdout.trim(),
     nodeVersion: process.version,
     platform: process.platform,
+    architecture: process.arch,
     artifacts
   });
   const checksumPath = path.join(root, 'dist', 'SHA256SUMS.txt');
