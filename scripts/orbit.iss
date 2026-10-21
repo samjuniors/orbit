@@ -2,7 +2,7 @@
 ; Compiles dist/orbit.exe and docs into a traditional Windows setup wizard.
 
 #ifndef AppVersion
-#define AppVersion "0.7.0"
+  #error AppVersion must be supplied by scripts/build-installer.js
 #endif
 
 [Setup]
