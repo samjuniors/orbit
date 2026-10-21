@@ -1,5 +1,18 @@
 const { app, BrowserWindow, Tray, Menu, nativeImage, Notification, ipcMain, safeStorage, shell, dialog } = require('electron');
 const path = require('node:path');
+const fs = require('node:fs');
+const { spawnSync } = require('node:child_process');
+const { parsePlan } = require('./engine/plan');
+const { loadPolicy, normalizePolicy, ADAPTER_IDS } = require('./engine/policy');
+const { detect, listAdapters } = require('./engine/adapters');
+const { runAdapterTest } = require('./engine/adapter-test');
+const { paths, loadState } = require('./engine/state');
+const { addTask } = require('./engine/ops');
+const { runPlan, previewNext } = require('./engine/engine');
+const { killAll } = require('./engine/process');
+const { checkUpdate } = require('./engine/update');
+const { nextStep } = require('./engine/next');
+const { suggestVerify } = require('./engine/setup');
 const { Store } = require('./core/store');
 const { discoverMachine } = require('./core/discovery');
 const { inspectTeam, fetchWorkspaceContext } = require('./core/linear');
@@ -65,13 +78,13 @@ function updateTrayMenu() {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1080,
-    height: 820,
-    minWidth: 860,
+    width: 1120,
+    height: 840,
+    minWidth: 900,
     minHeight: 680,
     show: false,
-    title: 'ORBIT Worker',
-    backgroundColor: '#0b1020',
+    title: 'ORBIT Desktop v0.7.0',
+    backgroundColor: '#070a13',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -98,7 +111,7 @@ function createWindow() {
 
 function createTray() {
   tray = new Tray(makeIcon());
-  tray.setToolTip('ORBIT Worker');
+  tray.setToolTip('ORBIT Desktop v0.7.0');
   updateTrayMenu();
   tray.on('click', () => showWindow());
   tray.on('double-click', () => showWindow());
@@ -380,6 +393,210 @@ app.whenReady().then(async () => {
   ipcMain.handle('orbit:set-startup', (_e, enabled) => { app.setLoginItemSettings({ openAtLogin: Boolean(enabled), path: app.getPath('exe'), args: ['--hidden'] }); store.setSettings({ startAtLogin: Boolean(enabled) }); return true; });
   ipcMain.handle('orbit:open-path', (_e, target) => shell.openPath(target));
   ipcMain.handle('orbit:open-url', (_e, target) => shell.openExternal(target));
+
+  // --- ORBIT v0.7.0 Core Engine Handlers ---
+  let activeProjectDir = store.data.settings.projectRoot || path.resolve(__dirname, '../../../');
+  if (!fs.existsSync(activeProjectDir)) activeProjectDir = process.cwd();
+
+  function getProjectInfo(dir = activeProjectDir) {
+    const planPath = path.join(dir, 'PLAN.md');
+    const polPath = path.join(dir, 'orbit.policy.json');
+    const planExists = fs.existsSync(planPath);
+    const policyExists = fs.existsSync(polPath);
+    let plan = null;
+    if (planExists) {
+      try { plan = parsePlan(fs.readFileSync(planPath, 'utf8')); } catch {}
+    }
+    let policy = null;
+    if (policyExists) {
+      try { policy = loadPolicy(polPath); } catch {}
+    }
+    const state = loadState(dir);
+    const p = paths(dir);
+    let report = '';
+    if (fs.existsSync(p.report)) {
+      try { report = fs.readFileSync(p.report, 'utf8'); } catch {}
+    }
+    const adapters = listAdapters(policy || {});
+
+    const gitCheck = spawnSync('git', ['--version'], { encoding: 'utf8' });
+    const gitRepoCheck = spawnSync('git', ['rev-parse', '--show-toplevel'], { cwd: dir });
+    const doctor = {
+      nodeOk: Number(process.versions.node.split('.')[0]) >= 20,
+      nodeVersion: process.version,
+      gitOk: gitCheck.status === 0,
+      gitVersion: (gitCheck.stdout || '').trim(),
+      isGitRepo: gitRepoCheck.status === 0,
+      planOk: Boolean(plan && plan.tasks.length > 0),
+      planTaskCount: plan?.tasks?.length || 0,
+      policyOk: Boolean(policy && (policy.verify || policy.allowUnverified)),
+      agentOk: Boolean(policy && detect(policy.agent, policy))
+    };
+
+    const gitBranchCheck = spawnSync('git', ['branch', '--show-current'], { cwd: dir, encoding: 'utf8' });
+    const gitBranch = (gitBranchCheck.stdout || '').trim() || 'main';
+
+    let nextAction = [];
+    try {
+      nextAction = nextStep({ root: dir });
+    } catch (e) {
+      nextAction = [`Inspection error: ${e.message}`];
+    }
+
+    const suggestedVerify = suggestVerify(dir) || 'npm test';
+
+    return {
+      dir,
+      version: '0.7.0',
+      gitBranch,
+      planExists,
+      policyExists,
+      plan,
+      policy: policy || {
+        agent: 'claude-code',
+        agentArgs: [],
+        verify: suggestedVerify,
+        approval: 'none',
+        limits: { maxAttempts: 3, taskTimeoutMin: 30, stallMin: 10, maxTasks: 0, maxRuntimeMin: 0 },
+        rules: { 'git.push': 'block', 'git.merge': 'block', 'pr.create': 'block' }
+      },
+      state,
+      report,
+      adapters,
+      doctor,
+      nextAction,
+      suggestedVerify
+    };
+  }
+
+  let activePlanRun = false;
+
+  ipcMain.handle('orbit:get-project-info', () => getProjectInfo(activeProjectDir));
+
+  ipcMain.handle('orbit:run-setup', async (_e, { agent, verify, approval, firstTask }) => {
+    const polPath = path.join(activeProjectDir, 'orbit.policy.json');
+    const planPath = path.join(activeProjectDir, 'PLAN.md');
+    let existing = {};
+    try { existing = loadPolicy(polPath); } catch {}
+    const policy = {
+      ...existing,
+      agent: agent || 'claude-code',
+      verify: verify || 'npm test',
+      approval: approval || 'none',
+      limits: { maxAttempts: 3, taskTimeoutMin: 30, stallMin: 10, maxTasks: 0, maxRuntimeMin: 0, ...(existing.limits || {}) },
+      rules: { 'git.push': 'block', 'git.merge': 'block', 'pr.create': 'block', ...(existing.rules || {}) }
+    };
+    fs.writeFileSync(polPath, JSON.stringify(policy, null, 2) + '\n');
+    if (!fs.existsSync(planPath) || firstTask) {
+      const title = path.basename(activeProjectDir);
+      const body = `# ${title}\n\nDescribe the project here: stack, conventions, what "good" looks like. Every task sees this.\n\n- [ ] ${firstTask || 'Scaffold first feature'}\n  Add concrete acceptance criteria so verification passes.\n`;
+      fs.writeFileSync(planPath, body);
+    }
+    return getProjectInfo(activeProjectDir);
+  });
+
+  ipcMain.handle('orbit:select-project-dir', async () => {
+    const res = await dialog.showOpenDialog(mainWindow, {
+      properties: ['openDirectory'],
+      defaultPath: activeProjectDir
+    });
+    if (!res.canceled && res.filePaths[0]) {
+      activeProjectDir = res.filePaths[0];
+      store.setSettings({ projectRoot: activeProjectDir });
+      return getProjectInfo(activeProjectDir);
+    }
+    return getProjectInfo(activeProjectDir);
+  });
+
+  ipcMain.handle('orbit:init-project', async () => {
+    const planPath = path.join(activeProjectDir, 'PLAN.md');
+    const polPath = path.join(activeProjectDir, 'orbit.policy.json');
+    if (!fs.existsSync(planPath)) {
+      fs.writeFileSync(planPath, `# My Project\n\nDescribe the project here: stack, conventions, what "good" looks like.\n\n- [ ] Scaffold the project\n  Set up the project structure and a passing test command.\n- [ ] Add the first feature\n  Describe it concretely, with acceptance criteria.\n`);
+    }
+    if (!fs.existsSync(polPath)) {
+      fs.writeFileSync(polPath, JSON.stringify({
+        agent: 'claude-code',
+        agentArgs: [],
+        verify: 'npm test',
+        approval: 'none',
+        limits: { maxAttempts: 3, taskTimeoutMin: 30, stallMin: 10, maxTasks: 0, maxRuntimeMin: 0 },
+        rules: { 'git.push': 'block', 'git.merge': 'block', 'pr.create': 'block' }
+      }, null, 2) + '\n');
+    }
+    return getProjectInfo(activeProjectDir);
+  });
+
+  ipcMain.handle('orbit:add-task', async (_e, { title, details }) => {
+    addTask({ root: activeProjectDir, planFile: 'PLAN.md', title, details: details || '' });
+    return getProjectInfo(activeProjectDir);
+  });
+
+  ipcMain.handle('orbit:save-policy', async (_e, newPolicy) => {
+    const polPath = path.join(activeProjectDir, 'orbit.policy.json');
+    fs.writeFileSync(polPath, JSON.stringify(newPolicy, null, 2) + '\n');
+    return getProjectInfo(activeProjectDir);
+  });
+
+  ipcMain.handle('orbit:dry-run', async () => {
+    const policy = loadPolicy(path.join(activeProjectDir, 'orbit.policy.json'));
+    return previewNext({ root: activeProjectDir, planFile: 'PLAN.md', policy });
+  });
+
+  ipcMain.handle('orbit:run-plan', async () => {
+    if (activePlanRun) throw new Error('A plan run is already in progress.');
+    activePlanRun = true;
+    const policy = loadPolicy(path.join(activeProjectDir, 'orbit.policy.json'));
+    const io = {
+      log: m => mainWindow?.webContents.send('orbit:plan-log', m),
+      event: e => mainWindow?.webContents.send('orbit:plan-event', e),
+      ask: async () => 'y',
+      onOutput: e => mainWindow?.webContents.send('orbit:plan-output', e),
+      sleep: ms => new Promise(r => setTimeout(r, ms)),
+      now: () => Date.now()
+    };
+    runPlan({ root: activeProjectDir, planFile: 'PLAN.md', policy, io })
+      .then(res => {
+        activePlanRun = false;
+        mainWindow?.webContents.send('orbit:plan-finished', res);
+      })
+      .catch(err => {
+        activePlanRun = false;
+        mainWindow?.webContents.send('orbit:plan-error', err.message);
+      });
+    return true;
+  });
+
+  ipcMain.handle('orbit:stop-plan', () => {
+    killAll();
+    activePlanRun = false;
+    return true;
+  });
+
+  ipcMain.handle('orbit:approve-plan-task', (_e, { id }) => {
+    const p = paths(activeProjectDir);
+    fs.mkdirSync(p.approvals, { recursive: true });
+    fs.writeFileSync(path.join(p.approvals, `${id}.approve`), '');
+    return getProjectInfo(activeProjectDir);
+  });
+
+  ipcMain.handle('orbit:reject-plan-task', (_e, { id, reason }) => {
+    const p = paths(activeProjectDir);
+    fs.mkdirSync(p.approvals, { recursive: true });
+    fs.writeFileSync(path.join(p.approvals, `${id}.reject`), reason || '');
+    return getProjectInfo(activeProjectDir);
+  });
+
+  ipcMain.handle('orbit:test-adapter', async (_e, agentId) => {
+    let pol = {};
+    try { pol = loadPolicy(path.join(activeProjectDir, 'orbit.policy.json')); } catch {}
+    const policy = normalizePolicy({ ...pol, agent: agentId });
+    return runAdapterTest({ policy });
+  });
+
+  ipcMain.handle('orbit:check-updates', async () => {
+    return checkUpdate({ currentVersion: '0.7.0', force: true });
+  });
 
   createWindow();
   createTray();

@@ -2,1036 +2,695 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'; img-src 'self' data:">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline'; img-src 'self' data:">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>ORBIT Worker</title>
+  <title>ORBIT Desktop v0.7.0</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
+
+<!-- SVG Icon Symbols Library -->
+<svg style="display: none;">
+  <defs>
+    <!-- Plan / Tasks -->
+    <g id="icon-plan">
+      <path d="M9 11l3 3L22 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <!-- Setup Wizard -->
+    <g id="icon-setup">
+      <path d="M15 4V2m0 16v-2M8 9h2m10 0h2m-4.2 2.8l1.4 1.4M18.8 6.2l-1.4 1.4M4 14l8-8 3 3-8 8H4v-3z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <!-- Policy & Guardrails -->
+    <g id="icon-policy">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M9 12l2 2 4-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <!-- Adapter Canary -->
+    <g id="icon-canary">
+      <path d="M10 2v7.31M14 2v7.31M8.5 2h7M14 9.3a6.5 6.5 0 1 1-4 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M8.5 15h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <!-- Doctor Diagnostics -->
+    <g id="icon-doctor">
+      <path d="M22 12h-4l-3 9L9 3l-3 9H2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <!-- Morning Report -->
+    <g id="icon-report">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="14 2 14 8 20 8" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="16" y1="13" x2="8" y2="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="16" y1="17" x2="8" y2="17" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <polyline points="10 9 9 9 8 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <!-- Updates -->
+    <g id="icon-updates">
+      <polyline points="23 4 23 10 17 10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <polyline points="1 20 1 14 7 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <!-- Folder -->
+    <g id="icon-folder">
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <!-- Play -->
+    <g id="icon-play">
+      <polygon points="5 3 19 12 5 21 5 3" fill="currentColor"/>
+    </g>
+    <!-- Stop -->
+    <g id="icon-stop">
+      <rect x="5" y="5" width="14" height="14" rx="2" fill="currentColor"/>
+    </g>
+    <!-- Eye / Dry Run -->
+    <g id="icon-eye">
+      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+    </g>
+    <!-- Plus -->
+    <g id="icon-plus">
+      <line x1="12" y1="5" x2="12" y2="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="5" y1="12" x2="19" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <!-- Checkmark -->
+    <g id="icon-check">
+      <polyline points="20 6 9 17 4 12" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </g>
+    <!-- X Mark -->
+    <g id="icon-x">
+      <line x1="18" y1="6" x2="6" y2="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+      <line x1="6" y1="6" x2="18" y2="18" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <!-- Alert Triangle -->
+    <g id="icon-alert">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="12" y1="9" x2="12" y2="13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <line x1="12" y1="17" x2="12.01" y2="17" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
+    </g>
+    <!-- Terminal -->
+    <g id="icon-terminal">
+      <polyline points="4 17 10 11 4 5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+      <line x1="12" y1="19" x2="20" y2="19" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <!-- Compass / Guidance -->
+    <g id="icon-compass">
+      <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/>
+      <polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" fill="currentColor"/>
+    </g>
+    <!-- Git Branch -->
+    <g id="icon-branch">
+      <line x1="6" y1="3" x2="6" y2="15" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <circle cx="18" cy="6" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+      <circle cx="6" cy="18" r="3" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M18 9a9 9 0 0 1-9 9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <!-- Clear / Trash -->
+    <g id="icon-trash">
+      <polyline points="3 6 5 6 21 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
+    </g>
+    <!-- Copy -->
+    <g id="icon-copy">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" fill="none" stroke="currentColor" stroke-width="2"/>
+    </g>
+  </defs>
+</svg>
+
 <header>
-  <div class="brand">
-    <div class="mark">O</div>
-    <div>
-      <b>ORBIT Worker</b>
-      <small>Local execution · Windows tray agent</small>
+  <!-- Brand Section -->
+  <div class="brand-section">
+    <div class="brand-logo-container">
+      <div class="brand-logo-orbit"></div>
+      <div class="brand-logo-core">O</div>
+    </div>
+    <div class="brand-meta">
+      <div class="brand-title-row">
+        <span class="brand-name">ORBIT</span>
+        <span class="brand-badge">DESKTOP</span>
+        <span class="version-badge">v0.7.0</span>
+      </div>
+      <span class="brand-sub">Unattended AI Agent Harness</span>
     </div>
   </div>
-  <nav id="viewNav" class="nav-tabs hidden">
-    <button id="navDashboard" class="nav-btn active">Dashboard</button>
-    <button id="navSettings" class="nav-btn">Settings</button>
-    <button id="navMinimize" class="nav-btn secondary">Minimize to tray</button>
+
+  <!-- Project Selector Breadcrumb -->
+  <div id="projectPicker" class="project-picker-card" title="Click to switch project directory">
+    <svg class="ui-icon" width="15" height="15"><use href="#icon-folder"/></svg>
+    <div class="project-picker-meta">
+      <div class="project-name-row">
+        <span id="currentProjectName" class="project-name">Loading…</span>
+        <span id="currentProjectBranch" class="branch-pill">
+          <svg class="ui-icon" width="11" height="11"><use href="#icon-branch"/></svg>
+          <span id="branchText">main</span>
+        </span>
+      </div>
+      <span id="currentProjectPath" class="project-path">e:\projects</span>
+    </div>
+    <span class="picker-arrow">▾</span>
+  </div>
+
+  <!-- Navigation Tabs -->
+  <nav class="nav-bar">
+    <button class="nav-tab active" data-tab="plan">
+      <svg class="ui-icon" width="15" height="15"><use href="#icon-plan"/></svg>
+      <span>Plan &amp; Run</span>
+    </button>
+    <button class="nav-tab" data-tab="setup">
+      <svg class="ui-icon" width="15" height="15"><use href="#icon-setup"/></svg>
+      <span>Guided Setup</span>
+    </button>
+    <button class="nav-tab" data-tab="policy">
+      <svg class="ui-icon" width="15" height="15"><use href="#icon-policy"/></svg>
+      <span>Policy &amp; Guards</span>
+    </button>
+    <button class="nav-tab" data-tab="canary">
+      <svg class="ui-icon" width="15" height="15"><use href="#icon-canary"/></svg>
+      <span>Canary Tests</span>
+    </button>
+    <button class="nav-tab" data-tab="doctor">
+      <svg class="ui-icon" width="15" height="15"><use href="#icon-doctor"/></svg>
+      <span>Doctor</span>
+    </button>
+    <button class="nav-tab" data-tab="report">
+      <svg class="ui-icon" width="15" height="15"><use href="#icon-report"/></svg>
+      <span>Report</span>
+    </button>
+    <button class="nav-tab" data-tab="updates">
+      <svg class="ui-icon" width="15" height="15"><use href="#icon-updates"/></svg>
+      <span>Updates</span>
+    </button>
   </nav>
-  <div id="status">Discovering machine…</div>
+
+  <!-- Right Actions -->
+  <div class="header-actions">
+    <div id="statusPill" class="status-indicator-pill ready">
+      <span class="status-dot"></span>
+      <span id="statusText">Ready</span>
+    </div>
+    <button id="btnMinimize" class="btn-icon" title="Minimize to System Tray">
+      <span style="font-size: 11px; font-weight: 700; letter-spacing: 0.05em;">TRAY</span>
+    </button>
+  </div>
 </header>
 
 <main>
-  <!-- ================= ONBOARDING VIEW ================= -->
-  <section id="onboardingView" class="onboard-container">
-    <div class="stepper">
-      <div id="stepTab1" class="step-item active"><span class="step-num">1</span><span class="step-text">Welcome</span></div>
-      <div id="stepTab2" class="step-item"><span class="step-num">2</span><span class="step-text">Detection</span></div>
-      <div id="stepTab3" class="step-item"><span class="step-num">3</span><span class="step-text">Integrations</span></div>
-      <div id="stepTab4" class="step-item"><span class="step-num">4</span><span class="step-text">Safety</span></div>
-      <div id="stepTab5" class="step-item"><span class="step-num">5</span><span class="step-text">Ready</span></div>
-    </div>
-
-    <!-- Step 1: Welcome -->
-    <div id="onboardStep1" class="onboard-step">
-      <div class="onboard-hero">
-        <small class="kicker">WELCOME TO ORBIT</small>
-        <h1>Your local background coding worker</h1>
-        <p>ORBIT connects authorized issues from your Linear task queue to local coding agents on your Windows PC. It executes work inside isolated Git worktrees, keeping your main branch safe.</p>
+  <!-- TAB 1: Plan & Run -->
+  <section id="panePlan" class="tab-pane active">
+    <!-- Next Action Guidance Card (Direct v0.7.0 Engine Feature) -->
+    <div id="guidanceCard" class="guidance-banner">
+      <div class="guidance-icon-col">
+        <svg class="ui-icon guidance-icon" width="22" height="22"><use href="#icon-compass"/></svg>
       </div>
-
-      <div class="feature-grid">
-        <div class="feature-card">
-          <div class="feature-icon">🔍</div>
-          <b>Automatic Discovery</b>
-          <p>Finds your local Node.js, Git, and verified agent CLIs (Antigravity and OpenCode) with zero manual path hunting.</p>
+      <div class="guidance-content">
+        <div class="guidance-header">
+          <span class="guidance-badge">ENGINE GUIDANCE (orbit next)</span>
+          <span id="guidanceSummary" class="guidance-title">Checking next action…</span>
         </div>
-        <div class="feature-card">
-          <div class="feature-icon">🛡️</div>
-          <b>Supervised &amp; Safe</b>
-          <p>Runs in Supervised mode by default. You approve tasks before the agent runs. Push, merge, and PR creation are disabled by default.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">📦</div>
-          <b>Isolated Worktrees</b>
-          <p>Every task runs in an isolated temporary Git worktree so your active branches and working files are never disrupted.</p>
-        </div>
-        <div class="feature-card">
-          <div class="feature-icon">🪟</div>
-          <b>Background Tray Execution</b>
-          <p>After setup, ORBIT runs quietly in the Windows notification area (system tray) without cluttering your desktop.</p>
-        </div>
+        <p id="guidanceDetail" class="guidance-text">Inspecting workspace state and PLAN.md tasks.</p>
       </div>
-
-      <div class="onboard-nav">
-        <div></div>
-        <button id="btnWelcomeStart" class="btn-primary">Start setup &rarr;</button>
+      <div class="guidance-action">
+        <button id="btnGuidanceAction" class="btn btn-primary btn-sm">▶ Run Plan</button>
       </div>
     </div>
 
-    <!-- Step 2: Automatic Detection -->
-    <div id="onboardStep2" class="onboard-step hidden">
-      <div class="step-header">
-        <small class="kicker">STEP 2 OF 5</small>
-        <h2>Automatic detection &amp; workspace</h2>
-        <p>ORBIT inspects your PC for required runtimes, verified coding agent CLIs, and local Git repositories.</p>
-      </div>
-
-      <div class="category-section">
-        <h3>Required runtimes</h3>
-        <div id="onboardRequiredTools" class="tools-grid"></div>
-      </div>
-
-      <div class="category-section">
-        <h3>Coding agent CLIs</h3>
-        <div id="onboardAgentTools" class="tools-grid"></div>
-      </div>
-
-      <div class="category-section">
-        <h3>Optional tools &amp; integrations</h3>
-        <div id="onboardOptionalTools" class="tools-grid"></div>
-      </div>
-
-      <div class="panel selection-panel">
-        <h3>Default agent &amp; workspace</h3>
-        <div class="two">
-          <label>Default coding agent
-            <select id="onboardAgentSelect">
-              <option value="">Select detected agent…</option>
-              <option value="antigravity">Antigravity CLI (agy)</option>
-              <option value="opencode">OpenCode CLI</option>
-            </select>
-          </label>
-          <label>Agent executable
-            <input id="onboardAgentExe" placeholder="Detected automatically">
-          </label>
-        </div>
-        <p class="muted">ORBIT never passes permission-bypass flags to coding agents.</p>
-
-        <div class="two spaced">
-          <label>Discovered Git repository
-            <select id="onboardRepoSelect">
-              <option value="">Choose discovered repository…</option>
-            </select>
-          </label>
-          <div class="browse-cell">
-            <label>Or select local folder</label>
-            <button id="onboardBrowseBtn" class="secondary">Browse folder…</button>
+    <div class="plan-run-grid">
+      <!-- Left: Interactive Plan -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <svg class="ui-icon" width="16" height="16"><use href="#icon-plan"/></svg>
+            <h2>Plan Tasks (PLAN.md)</h2>
+            <span id="planStats" class="badge-tag pending">0 tasks</span>
+          </div>
+          <div class="panel-actions">
+            <button id="btnOpenAddTask" class="btn btn-secondary btn-sm">
+              <svg class="ui-icon" width="13" height="13"><use href="#icon-plus"/></svg>
+              <span>Add Task</span>
+            </button>
           </div>
         </div>
 
-        <div class="two spaced">
-          <label>Project repository path
-            <input id="onboardProjectPath" placeholder="e.g. C:\Users\you\source\my-project">
-          </label>
-          <label>Project name
-            <input id="onboardProjectName" placeholder="e.g. My App">
-          </label>
-        </div>
-      </div>
-
-      <div class="onboard-nav">
-        <button id="btnStep2Back" class="secondary">&larr; Back</button>
-        <button id="btnStep2Next" class="btn-primary">Next: Integrations &rarr;</button>
-      </div>
-    </div>
-
-    <!-- Step 3: Integrations -->
-    <div id="onboardStep3" class="onboard-step hidden">
-      <div class="step-header">
-        <small class="kicker">STEP 3 OF 5</small>
-        <h2>Connect integrations</h2>
-        <p>Connect your task queue and workspace tools. Linear is required for tasks; Notion, Obsidian, and GitHub are optional and can be connected now or later.</p>
-      </div>
-
-      <div class="unified-integrations-grid">
-        <!-- 1. Linear -->
-        <div class="integration-card" id="onboardLinearCard">
-          <div class="integration-header">
-            <div class="integration-title-group">
-              <span class="integration-icon icon-linear">◆</span>
-              <div>
-                <h3>Linear</h3>
-                <p class="integration-purpose">Task queue &amp; issue tracking</p>
+        <div class="panel-body">
+          <!-- Progress Bar & Filters -->
+          <div class="plan-controls-bar">
+            <div class="progress-container">
+              <div class="progress-meta">
+                <span id="progressText">0 of 0 completed (0%)</span>
+                <span id="activeBranchText" class="code-tag">main</span>
               </div>
-            </div>
-            <span id="onboardLinearStatusPill" class="pill not-connected">Not connected</span>
-          </div>
-
-          <!-- Disconnected -->
-          <div id="onboardLinearDisconnected" class="integration-body">
-            <div class="connect-action-row">
-              <input id="onboardLinearToken" type="password" placeholder="Paste Linear API key (lin_api_...)">
-              <button id="onboardLinearConnectBtn" class="btn-primary">Connect Linear</button>
-            </div>
-            <p class="muted small-note">Generate your API key in Linear: Settings &rarr; Account &rarr; Security &amp; Access &rarr; API.</p>
-            <details class="dev-options">
-              <summary>Advanced: OAuth (PKCE S256)</summary>
-              <div class="dev-options-content">
-                <p class="muted">Authorize via browser with a registered Linear OAuth client ID:</p>
-                <div class="two spaced">
-                  <input id="onboardClientId" placeholder="OAuth Client ID (from Linear)">
-                  <button id="onboardLinearOAuthBtn" class="secondary">Connect with OAuth</button>
-                </div>
-              </div>
-            </details>
-          </div>
-
-          <!-- Connecting -->
-          <div id="onboardLinearWaiting" class="integration-body hidden">
-            <div class="integration-waiting-row">
-              <div class="spinner"></div>
-              <div class="waiting-text">
-                <b id="onboardLinearWaitingTitle">Connecting to Linear…</b>
-                <small class="muted" id="onboardLinearWaitingDesc">Verifying credentials and fetching workspace context…</small>
-              </div>
-              <button id="onboardLinearCancelBtn" class="secondary btn-sm">Cancel</button>
-            </div>
-          </div>
-
-          <!-- Connected -->
-          <div id="onboardLinearConnected" class="integration-body hidden">
-            <div class="connected-summary-row">
-              <div class="connected-identity">
-                <span class="connected-dot"></span>
-                <b id="onboardWorkspaceName">Linear Workspace</b>
-                <span class="muted" id="onboardConnectedUser">Signed in</span>
-              </div>
-              <button id="onboardLinearDisconnectBtn" class="danger btn-sm">Disconnect</button>
-            </div>
-            <div class="two spaced">
-              <label>Linear Team
-                <select id="onboardTeamSelect">
-                  <option value="">Select team…</option>
-                </select>
-              </label>
-              <label>Project (Optional)
-                <select id="onboardProjectSelect">
-                  <option value="">All projects</option>
-                </select>
-              </label>
-            </div>
-            <div class="two spaced">
-              <label>Ready state name
-                <input id="onboardReadyState" value="Ready for ORBIT">
-              </label>
-              <label>In-progress state
-                <select id="onboardInProgress"><option value="">Select team first</option></select>
-              </label>
-            </div>
-            <div class="two spaced">
-              <label>Review state
-                <select id="onboardReview"><option value="">Select team first</option></select>
-              </label>
-              <div class="team-refresh-cell">
-                <label>Need to update?</label>
-                <button id="onboardRefreshTeamsBtn" class="secondary btn-sm">Refresh teams</button>
-              </div>
-            </div>
-            <input type="hidden" id="onboardTeamKey">
-          </div>
-
-          <!-- Error -->
-          <div id="onboardLinearError" class="integration-body hidden">
-            <div class="integration-error-box">
-              <p id="onboardLinearErrorText">Connection failed</p>
-              <button id="onboardLinearRetryBtn" class="secondary btn-sm">Retry</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 2. Notion -->
-        <div class="integration-card" id="onboardNotionCard">
-          <div class="integration-header">
-            <div class="integration-title-group">
-              <span class="integration-icon icon-notion">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                  <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.093-.373L17.65 2.155c-.466-.373-.933-.56-1.587-.56L3.992 2.62c-.653.047-.793.42-.513.653l.98 1.935zm.933 3.639v12.455c0 .886.467 1.213 1.4 1.12l14.474-.84c.933-.047 1.12-.56 1.12-1.306V6.727c0-.7-.373-1.073-1.026-1.026l-14.8 1.026c-.84.047-1.168.42-1.168 1.12zm13.169.746c.093.42.047.84-.373.886l-.793.14v10.123c-.56.327-1.12.513-1.587.513-.746 0-1.026-.233-1.447-.84l-5.6-8.723v8.117l1.587.373c.093.42.047.84-.373.886l-3.593.233c-.093-.42-.047-.84.373-.886l.933-.233V8.825l-1.306-.14c-.093-.42-.047-.84.373-.886l3.78-.233 5.88 8.91V8.545l-1.307-.14c-.093-.42-.047-.84.373-.886l3.453-.233z"/>
-                </svg>
-              </span>
-              <div>
-                <h3>Notion</h3>
-                <p class="integration-purpose">Product specs &amp; documentation workspace</p>
-              </div>
-            </div>
-            <span id="onboardNotionStatusPill" class="pill not-connected">Not connected</span>
-          </div>
-
-          <!-- Disconnected -->
-          <div id="onboardNotionDisconnected" class="integration-body">
-            <div class="connect-action-row">
-              <input id="onboardNotionToken" type="password" placeholder="Paste Notion integration token (secret_...)">
-              <button id="onboardNotionConnectBtn" class="btn-primary">Connect Notion</button>
-            </div>
-            <p class="muted small-note">Create an internal integration in Notion: Settings &rarr; Connections &rarr; Develop or visit notion.so/my-integrations.</p>
-          </div>
-
-          <!-- Connecting -->
-          <div id="onboardNotionWaiting" class="integration-body hidden">
-            <div class="integration-waiting-row">
-              <div class="spinner"></div>
-              <div class="waiting-text">
-                <b>Connecting to Notion…</b>
-                <small class="muted">Verifying integration token and permissions…</small>
-              </div>
-              <button id="onboardNotionCancelBtn" class="secondary btn-sm">Cancel</button>
-            </div>
-          </div>
-
-          <!-- Connected -->
-          <div id="onboardNotionConnected" class="integration-body hidden">
-            <div class="connected-summary-row">
-              <div class="connected-identity">
-                <span class="connected-dot"></span>
-                <b id="onboardNotionWorkspaceName">Notion Workspace</b>
-                <span class="muted" id="onboardNotionBotName">Integration</span>
-              </div>
-              <button id="onboardNotionDisconnectBtn" class="danger btn-sm">Disconnect</button>
-            </div>
-            <div class="two spaced">
-              <label>Authorized Database
-                <select id="onboardNotionDbSelect">
-                  <option value="">Select database…</option>
-                </select>
-              </label>
-              <label>Authorized Page (Optional)
-                <select id="onboardNotionPageSelect">
-                  <option value="">Select page…</option>
-                </select>
-              </label>
-            </div>
-            <div class="permissions-notice">
-              <small class="muted">Permissions: Read-only access to authorized resources</small>
-            </div>
-          </div>
-
-          <!-- Error -->
-          <div id="onboardNotionError" class="integration-body hidden">
-            <div class="integration-error-box">
-              <p id="onboardNotionErrorText">Connection failed</p>
-              <button id="onboardNotionRetryBtn" class="secondary btn-sm">Retry</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 3. Obsidian -->
-        <div class="integration-card" id="onboardObsidianCard">
-          <div class="integration-header">
-            <div class="integration-title-group">
-              <span class="integration-icon icon-obsidian">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                  <path d="M18.88 12.35l-3.32-8.31a1.2 1.2 0 00-.73-.7l-4.42-1.3a1.2 1.2 0 00-1.18.34L3.6 7.7a1.2 1.2 0 00-.28 1.14l2.12 7.7a1.2 1.2 0 00.56.74l8.15 4.54a1.2 1.2 0 001.29-.08l4.42-3.46a1.2 1.2 0 00.38-1.1l-1.36-4.83zm-7.65-8.24l3.14.92-2.18 5.46-3.7-2.12 2.74-4.26zm-4.72 5.09l3.52 2.02-3.1 7.76-1.52-5.52 1.1-4.26zm6.81 10.96l-6.3-3.51 2.92-7.3 5.02 2.87-1.64 7.94zm2.84-2.85l-.94-4.57 2.02-5.06 1.02 3.65-2.1 5.98z"/>
-                </svg>
-              </span>
-              <div>
-                <h3>Obsidian</h3>
-                <p class="integration-purpose">Local knowledge base &amp; markdown notes</p>
-              </div>
-            </div>
-            <span id="onboardObsidianStatusPill" class="pill not-connected">Not connected</span>
-          </div>
-
-          <!-- Disconnected -->
-          <div id="onboardObsidianDisconnected" class="integration-body">
-            <div class="connect-action-row">
-              <select id="onboardObsidianVaultSelect">
-                <option value="">Choose discovered vault…</option>
-              </select>
-              <button id="onboardObsidianConnectBtn" class="btn-primary">Connect Vault</button>
-            </div>
-            <div class="secondary-action-row">
-              <button id="onboardObsidianBrowseBtn" class="secondary btn-sm">Or choose custom vault folder…</button>
-            </div>
-          </div>
-
-          <!-- Connecting -->
-          <div id="onboardObsidianWaiting" class="integration-body hidden">
-            <div class="integration-waiting-row">
-              <div class="spinner"></div>
-              <div class="waiting-text">
-                <b>Connecting vault…</b>
-                <small class="muted">Validating local directory and read-only access…</small>
+              <div class="progress-bar-bg">
+                <div id="progressBarFill" class="progress-bar-fill"></div>
               </div>
             </div>
           </div>
 
-          <!-- Connected -->
-          <div id="onboardObsidianConnected" class="integration-body hidden">
-            <div class="connected-summary-row">
-              <div class="connected-identity">
-                <span class="connected-dot"></span>
-                <b id="onboardObsidianVaultName">Vault Name</b>
-                <small class="muted mono-path" id="onboardObsidianVaultPath">C:\Vault</small>
+          <!-- Task List -->
+          <div id="taskList" class="task-list">
+            <div class="empty-state">
+              <svg class="ui-icon" width="36" height="36" style="color: var(--text-dim)"><use href="#icon-plan"/></svg>
+              <p>Loading tasks from PLAN.md…</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Runner & Console -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title-group">
+            <svg class="ui-icon" width="16" height="16"><use href="#icon-terminal"/></svg>
+            <h2>Execution Runner</h2>
+          </div>
+          <div class="runner-controls">
+            <button id="btnDryRun" class="btn btn-secondary btn-sm" title="Preview prompt and git worktree without running agent">
+              <svg class="ui-icon" width="14" height="14"><use href="#icon-eye"/></svg>
+              <span>Dry Run</span>
+            </button>
+            <button id="btnRunPlan" class="btn btn-primary btn-sm" title="Run through tasks unattended in isolated git worktrees">
+              <svg class="ui-icon" width="13" height="13"><use href="#icon-play"/></svg>
+              <span>Run Plan</span>
+            </button>
+            <button id="btnStopPlan" class="btn btn-danger btn-sm" style="display: none;" title="Kill running agent process immediately">
+              <svg class="ui-icon" width="13" height="13"><use href="#icon-stop"/></svg>
+              <span>Stop Run</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="panel-body runner-body">
+          <!-- Approval Required Card -->
+          <div id="approvalCard" class="approval-card" style="display: none;">
+            <div class="approval-header">
+              <svg class="ui-icon" width="18" height="18" style="color: var(--warning)"><use href="#icon-alert"/></svg>
+              <span id="approvalTitle">Task requires your approval</span>
+            </div>
+            <p id="approvalDesc" class="approval-desc">Verification tests passed. Please review the branch work before committing.</p>
+            <div id="approvalDiffStat" class="diff-stat-preview"></div>
+            
+            <div class="approval-actions">
+              <button id="btnApproveTask" class="btn btn-success btn-sm">
+                <svg class="ui-icon" width="13" height="13"><use href="#icon-check"/></svg>
+                <span>Approve &amp; Commit</span>
+              </button>
+              <button id="btnRejectTask" class="btn btn-danger btn-sm">
+                <svg class="ui-icon" width="13" height="13"><use href="#icon-x"/></svg>
+                <span>Reject with Feedback</span>
+              </button>
+            </div>
+            <div id="rejectFeedbackRow" class="reject-row" style="display: none;">
+              <input id="inputRejectReason" class="form-input" placeholder="What should change? (agent will retry with this feedback)">
+              <button id="btnConfirmReject" class="btn btn-danger btn-sm">Submit Feedback</button>
+            </div>
+          </div>
+
+          <!-- Active Task Status Card -->
+          <div id="activeRunCard" class="active-run-card">
+            <div class="run-card-top">
+              <div class="run-title-group">
+                <span id="activeRunSpinner" class="run-spinner" style="display: none;"></span>
+                <b id="activeTaskTitle">No execution in progress</b>
               </div>
-              <button id="onboardObsidianDisconnectBtn" class="danger btn-sm">Disconnect</button>
+              <span id="activeAttemptTag" class="badge-tag pending">Idle</span>
             </div>
-            <div class="permissions-notice">
-              <small class="success-text">🔒 Read-only mode active: ORBIT will never modify, reorganize, or delete vault files.</small>
+            <div class="run-card-meta">
+              <div class="meta-item">Agent: <b id="activeAgentName">-</b></div>
+              <div class="meta-item">Verify: <b id="activeVerifyCmd">-</b></div>
+              <div class="meta-item">Elapsed: <b id="activeElapsedTimer">00:00</b></div>
             </div>
           </div>
 
-          <!-- Error -->
-          <div id="onboardObsidianError" class="integration-body hidden">
-            <div class="integration-error-box">
-              <p id="onboardObsidianErrorText">Vault validation failed</p>
-              <button id="onboardObsidianRetryBtn" class="secondary btn-sm">Retry</button>
-            </div>
-          </div>
-        </div>
-
-        <!-- 4. GitHub -->
-        <div class="integration-card" id="onboardGithubCard">
-          <div class="integration-header">
-            <div class="integration-title-group">
-              <span class="integration-icon icon-github">
-                <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                  <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-                </svg>
-              </span>
-              <div>
-                <h3>GitHub</h3>
-                <p class="integration-purpose">Source code repositories &amp; pull requests</p>
+          <!-- Console Terminal Output -->
+          <div class="terminal-container">
+            <div class="terminal-toolbar">
+              <div class="terminal-dots">
+                <span class="dot red"></span>
+                <span class="dot yellow"></span>
+                <span class="dot green"></span>
+              </div>
+              <span class="terminal-label">orbit-engine.log</span>
+              <div class="terminal-actions">
+                <button id="btnClearLog" class="btn-ghost-sm" title="Clear console">
+                  <svg class="ui-icon" width="12" height="12"><use href="#icon-trash"/></svg>
+                  <span>Clear</span>
+                </button>
+                <button id="btnCopyLog" class="btn-ghost-sm" title="Copy console log">
+                  <svg class="ui-icon" width="12" height="12"><use href="#icon-copy"/></svg>
+                  <span>Copy</span>
+                </button>
               </div>
             </div>
-            <span id="onboardGithubStatusPill" class="pill not-connected">Not connected</span>
+            <div id="consoleBox" class="terminal-box">[orbit v0.7.0] Engine ready. Select or initialize a project to run tasks unattended.</div>
           </div>
-
-          <!-- Disconnected -->
-          <div id="onboardGithubDisconnected" class="integration-body">
-            <div id="onboardGithubCliPrompt" class="github-cli-prompt hidden">
-              <p id="onboardGithubCliText">GitHub CLI detected on PC. Click below to connect with 1 click.</p>
-            </div>
-            <div class="connect-action-row">
-              <input id="onboardGithubToken" type="password" placeholder="GitHub Personal Access Token (Optional if gh CLI is logged in)">
-              <button id="onboardGithubConnectBtn" class="btn-primary">Connect GitHub</button>
-            </div>
-          </div>
-
-          <!-- Connecting -->
-          <div id="onboardGithubWaiting" class="integration-body hidden">
-            <div class="integration-waiting-row">
-              <div class="spinner"></div>
-              <div class="waiting-text">
-                <b>Connecting to GitHub…</b>
-                <small class="muted">Verifying identity and repository permissions…</small>
-              </div>
-              <button id="onboardGithubCancelBtn" class="secondary btn-sm">Cancel</button>
-            </div>
-          </div>
-
-          <!-- Connected -->
-          <div id="onboardGithubConnected" class="integration-body hidden">
-            <div class="connected-summary-row">
-              <div class="connected-identity">
-                <span class="connected-dot"></span>
-                <b id="onboardGithubUserName">@user</b>
-                <span class="muted" id="onboardGithubRealName">Name</span>
-              </div>
-              <button id="onboardGithubDisconnectBtn" class="danger btn-sm">Disconnect</button>
-            </div>
-            <div class="spaced">
-              <label>Scoped Repository
-                <select id="onboardGithubRepoSelect">
-                  <option value="">Select repository…</option>
-                </select>
-              </label>
-            </div>
-            <div class="permissions-notice">
-              <small class="muted" id="onboardGithubPermNotice">Permissions: git push &amp; PR creation restricted by safety rules</small>
-            </div>
-          </div>
-
-          <!-- Error -->
-          <div id="onboardGithubError" class="integration-body hidden">
-            <div class="integration-error-box">
-              <p id="onboardGithubErrorText">Connection failed</p>
-              <button id="onboardGithubRetryBtn" class="secondary btn-sm">Retry</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <div class="onboard-nav">
-        <button id="btnStep3Back" class="secondary">&larr; Back</button>
-        <button id="btnStep3Next" class="btn-primary">Next: Safety &amp; Approvals &rarr;</button>
-      </div>
-    </div>
-
-    <!-- Step 4: Safety & Autonomy -->
-    <div id="onboardStep4" class="onboard-step hidden">
-      <div class="step-header">
-        <small class="kicker">STEP 4 OF 5</small>
-        <h2>Safety, autonomy &amp; permissions</h2>
-        <p>ORBIT enforces strict guardrails to keep you in control of what code the agent can run and change.</p>
-      </div>
-
-      <div class="panel wide">
-        <h3>Execution mode: Supervised (Default)</h3>
-        <p>In Supervised mode, ORBIT claims eligible issues from Linear and prepares an isolated Git worktree, but <b>pauses and asks for your approval</b> before the coding agent touches any code.</p>
-
-        <div class="two spaced">
-          <label class="check">
-            <input type="checkbox" id="onboardRequireApproval" checked disabled>
-            <b>Require approval before the agent runs (Supervised)</b>
-          </label>
-          <label class="check">
-            <input type="checkbox" id="onboardApprovalBeforeReview" checked>
-            <b>Pause once for review before finalizing task</b>
-          </label>
-        </div>
-
-        <div class="banner">
-          <b>Safe Process-Level Interceptor:</b> Git push, git merge, and pull request creation are disabled by default. Deployment and force-push are permanently blocked.
-        </div>
-
-        <div class="two spaced">
-          <label class="check"><input type="checkbox" id="onboardAllowPush"> Allow agent to <code>git push</code> (Disabled by default)</label>
-          <label class="check"><input type="checkbox" id="onboardAllowPR"> Allow agent to open pull requests (Disabled by default)</label>
-        </div>
-        <div class="two">
-          <label class="check"><input type="checkbox" id="onboardAllowMerge"> Allow agent to <code>git merge</code> (Disabled by default)</label>
-          <label>Max tasks per day (0 = unlimited)<input id="onboardMaxTasks" value="10"></label>
-        </div>
-      </div>
-
-      <div class="onboard-nav">
-        <button id="btnStep4Back" class="secondary">&larr; Back</button>
-        <button id="btnStep4Next" class="btn-primary">Next: Ready to launch &rarr;</button>
-      </div>
-    </div>
-
-    <!-- Step 5: Ready -->
-    <div id="onboardStep5" class="onboard-step hidden">
-      <div class="step-header">
-        <small class="kicker">STEP 5 OF 5</small>
-        <h2>Ready to launch ORBIT</h2>
-        <p>Your local background worker is configured. Review your summary below.</p>
-      </div>
-
-      <div class="summary-card">
-        <div class="summary-item">
-          <span class="summary-label">Coding Agent:</span>
-          <b id="summaryAgent">Not selected</b>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">Workspace:</span>
-          <b id="summaryWorkspace">Not selected</b>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">Linear Queue:</span>
-          <b id="summaryLinear">Not configured</b>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">Safety Mode:</span>
-          <b id="summarySafety">Supervised (Approval required)</b>
-        </div>
-        <div class="summary-item">
-          <span class="summary-label">Background Execution:</span>
-          <b>Windows System Tray</b>
-        </div>
-      </div>
-
-      <div class="tray-tip-box">
-        <div class="tray-icon">🪟</div>
-        <div>
-          <b>Runs in the Windows notification area</b>
-          <p>Clicking <b>Start ORBIT</b> will minimize this window to the system tray. The worker will stay active in the background polling for authorized tasks. Click the tray icon at any time to reopen ORBIT or access settings.</p>
-        </div>
-      </div>
-
-      <div class="onboard-nav">
-        <button id="btnStep5Back" class="secondary">&larr; Back</button>
-        <div class="actions">
-          <button id="btnGoDashboard" class="secondary">Open Dashboard</button>
-          <button id="btnStartOrbit" class="btn-primary">Start ORBIT &rarr;</button>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- ================= DASHBOARD VIEW ================= -->
-  <section id="dashboardView" class="hidden">
-    <div class="hero">
-      <div>
-        <small class="kicker">LOCAL DESKTOP WORKER</small>
-        <h1>Agent runtime dashboard</h1>
-        <p>Monitors authorized tasks, executes scoped work in isolated Git worktrees, and pauses for your approval.</p>
-      </div>
-      <div class="actions">
-        <button id="btnScanFromDash" class="secondary">Scan machine</button>
-        <button id="btnMinimizeFromDash" class="secondary">Minimize to tray</button>
-      </div>
-    </div>
-
-    <div class="grid">
-      <!-- Activity & controls -->
-      <article class="panel wide">
-        <div class="panel-header-row">
-          <h2>Current worker activity <span id="workerState" class="pill">Stopped</span></h2>
-          <div class="actions">
-            <button id="start" class="btn-primary">Start worker</button>
-            <button id="pause" class="secondary">Pause queue</button>
-            <button id="stop" class="danger">Stop worker</button>
-          </div>
+  <!-- TAB 2: Guided Setup (v0.6/0.7 Wizard) -->
+  <section id="paneSetup" class="tab-pane">
+    <div class="panel wizard-panel">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <svg class="ui-icon" width="18" height="18"><use href="#icon-setup"/></svg>
+          <h2>Guided Project Setup (orbit setup)</h2>
         </div>
-        <p id="activeTask" class="active-task-line">No active task</p>
-        <div id="log" class="log"></div>
-      </article>
-
-      <!-- Pending approval -->
-      <article class="panel wide">
-        <h2>Pending approval <span id="pendingCount" class="pill">0</span></h2>
-        <div id="pendingList">
-          <p class="muted">Nothing is waiting. In Supervised mode, claimed tasks show up here before the agent runs; every tier also pauses once here before finalizing, unless you turn that off in Settings.</p>
-        </div>
-      </article>
-
-      <!-- Blocked tasks -->
-      <article class="panel wide">
-        <h2>Blocked — needs you <span id="blockedCount" class="pill">0</span></h2>
-        <div id="blockedList">
-          <p class="muted">Nothing is blocked. A task lands here if verification kept failing after the retry budget, with its worktree preserved so you can Resume it.</p>
-        </div>
-      </article>
-    </div>
-  </section>
-
-  <!-- ================= SETTINGS VIEW ================= -->
-  <section id="settingsView" class="hidden">
-    <div class="hero">
-      <div>
-        <small class="kicker">CONFIGURATION</small>
-        <h1>Worker settings</h1>
-        <p>Manage agent executable paths, Linear authentication, autonomy rules, schedules, and local diagnostics.</p>
+        <span class="badge-tag done">5-Step Wizard</span>
       </div>
-      <div class="actions">
-        <button id="btnBackToDash" class="secondary">&larr; Back to Dashboard</button>
-        <button id="btnSaveAllSettings" class="btn-primary">Save Settings</button>
-      </div>
-    </div>
+      <div class="panel-body">
+        <p class="section-intro">Configure your project for unattended coding agent execution without manually writing JSON files.</p>
 
-    <!-- Re-run setup wizard banner -->
-    <div class="wizard-callout">
-      <div>
-        <b>Guided First-Run Setup</b>
-        <p class="muted">Want to run through the guided onboarding wizard again?</p>
-      </div>
-      <button id="btnRerunOnboarding" class="secondary">Re-run Onboarding Setup</button>
-    </div>
-
-    <div class="grid">
-      <!-- Machine discovery & diagnostics -->
-      <article class="panel wide">
-        <div class="panel-header-row">
-          <h2>Machine discovery &amp; diagnostics</h2>
-          <button id="scan" class="secondary">Scan machine</button>
-        </div>
-        <div id="tools" class="tools"></div>
-        <p id="roots" class="muted"></p>
-      </article>
-
-      <!-- Agent configuration -->
-      <article class="panel">
-        <h2>Agent configuration</h2>
-        <label>Default agent
-          <select id="agent">
-            <option value="">Choose an agent…</option>
-            <option value="antigravity">Antigravity CLI (agy)</option>
-            <option value="opencode">OpenCode CLI</option>
-          </select>
-        </label>
-        <label>Executable path
-          <input id="exe" placeholder="Detected automatically">
-        </label>
-        <p class="muted">The worker does not pass permission-bypass flags to agent CLIs.</p>
-      </article>
-
-      <!-- Project workspace -->
-      <article class="panel">
-        <h2>Project workspace</h2>
-        <label>Project name<input id="projectName" placeholder="e.g. Lumora V5"></label>
-        <label>Repository path<input id="projectPath" placeholder="C:\Users\you\source\project"></label>
-        <button id="browse" class="secondary">Browse folder…</button>
-        <label>Detected repositories
-          <select id="candidates">
-            <option value="">Choose discovered repository…</option>
-          </select>
-        </label>
-        <label>Base branch<input id="baseBranch" value="HEAD"></label>
-        <label>Project instructions<textarea id="instructions" rows="3"></textarea></label>
-        <label>Verification command (e.g. <code>npm test</code>)<input id="verifyCommand" placeholder="Runs in the worktree after each attempt"></label>
-        <label>Max fix attempts if verification fails<input id="maxGateRetries" value="2"></label>
-      </article>
-
-      <!-- Unified Integrations Section in Settings -->
-      <article class="panel wide" id="integrationsSettingsSection">
-        <h2>Connected integrations</h2>
-        <p class="muted">Manage your task queue, knowledge bases, and source code integrations.</p>
-
-        <div class="unified-integrations-grid">
-          <!-- 1. Linear in Settings -->
-          <div class="integration-card" id="linearSettingsCard">
-            <div class="integration-header">
-              <div class="integration-title-group">
-                <span class="integration-icon icon-linear">◆</span>
-                <div>
-                  <h3>Linear</h3>
-                  <p class="integration-purpose">Task queue &amp; issue tracking</p>
+        <div class="wizard-steps-container">
+          <!-- Step 1: Git -->
+          <div class="wizard-step">
+            <div class="step-num">1</div>
+            <div class="step-content">
+              <h3>Git Repository Isolation</h3>
+              <p class="step-desc">ORBIT creates a separate git worktree and branch for every task so your active working tree remains untouched.</p>
+              <div id="setupGitStatusCard" class="info-card">
+                <div class="info-card-row">
+                  <span>Git Repository:</span>
+                  <span id="setupGitRepoVal" class="badge-tag done">Detected</span>
+                </div>
+                <div class="info-card-row">
+                  <span>Active Branch:</span>
+                  <span id="setupGitBranchVal" class="code-tag">main</span>
                 </div>
               </div>
-              <span id="linearStatus" class="pill not-connected">Not connected</span>
             </div>
+          </div>
 
-            <!-- Disconnected -->
-            <div id="linearDisconnected" class="integration-body">
-              <div class="connect-action-row">
-                <input id="token" type="password" placeholder="Paste Linear API key (lin_api_...)">
-                <button id="linearConnectBtn" class="btn-primary">Connect Linear</button>
+          <!-- Step 2: Agent -->
+          <div class="wizard-step">
+            <div class="step-num">2</div>
+            <div class="step-content">
+              <h3>Select Coding Agent</h3>
+              <p class="step-desc">Which AI coding agent CLI will execute your tasks?</p>
+              <div id="setupAgentGrid" class="agent-grid">
+                <!-- Dynamically populated -->
               </div>
-              <p class="muted small-note">Generate your API key in Linear: Settings &rarr; Account &rarr; Security &amp; Access &rarr; API.</p>
-              <details class="dev-options" id="devOptions">
-                <summary>Advanced: OAuth (PKCE S256)</summary>
-                <div class="dev-options-content">
-                  <p class="muted">Authorize via browser with a registered Linear OAuth client ID:</p>
-                  <div class="two spaced">
-                    <input id="clientId" placeholder="OAuth Client ID (from Linear)">
-                    <button id="linearOAuthBtn" class="secondary">Connect with OAuth</button>
+            </div>
+          </div>
+
+          <!-- Step 3: Verification -->
+          <div class="wizard-step">
+            <div class="step-num">3</div>
+            <div class="step-content">
+              <h3>Verification Proof Command</h3>
+              <p class="step-desc">A command that MUST exit 0 before a task is considered finished. ORBIT will never call work done without proof.</p>
+              <div class="form-group" style="max-width: 500px;">
+                <div style="display: flex; gap: 8px;">
+                  <input id="setupVerifyInput" class="form-input" placeholder="npm test" value="npm test">
+                  <button id="btnApplySuggestedVerify" class="btn btn-secondary btn-sm" style="white-space: nowrap;">Auto-Detect</button>
+                </div>
+                <small id="setupVerifyHint" style="color: var(--text-dim); font-size: 11.5px; margin-top: 4px; display: block;">Suggested from project files: npm test</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Step 4: Review Mode -->
+          <div class="wizard-step">
+            <div class="step-num">4</div>
+            <div class="step-content">
+              <h3>Review &amp; Approval Style</h3>
+              <p class="step-desc">How would you like to review changes before committing?</p>
+              <div class="radio-card-grid">
+                <div class="radio-card selected" data-approval="none">
+                  <div class="radio-card-header">
+                    <b>Unattended (Review at end)</b>
+                    <span class="badge-tag done">Recommended</span>
                   </div>
+                  <p>Runs through the plan continuously. You review the whole branch when finished.</p>
                 </div>
-              </details>
-            </div>
-
-            <!-- Waiting -->
-            <div id="linearWaiting" class="integration-body hidden">
-              <div class="integration-waiting-row">
-                <div class="spinner"></div>
-                <div class="waiting-text">
-                  <b id="linearWaitingTitle">Connecting to Linear…</b>
-                  <small class="muted" id="linearWaitingDesc">Verifying credentials and fetching workspace context…</small>
+                <div class="radio-card" data-approval="each-task">
+                  <div class="radio-card-header">
+                    <b>Supervised (Each Task)</b>
+                    <span class="badge-tag pending">Safest</span>
+                  </div>
+                  <p>Pauses after every task verification and awaits your OK before committing.</p>
                 </div>
-                <button id="linearCancelBtn" class="secondary btn-sm">Cancel</button>
-              </div>
-            </div>
-
-            <!-- Connected -->
-            <div id="linearConnected" class="integration-body hidden">
-              <div class="connected-summary-row">
-                <div class="connected-identity">
-                  <span class="connected-dot"></span>
-                  <b id="settingsWorkspaceName">Linear Workspace</b>
-                  <span class="muted" id="settingsConnectedUser">Signed in</span>
-                </div>
-                <button id="linearDisconnectBtn" class="danger btn-sm">Disconnect</button>
-              </div>
-              <div class="two spaced">
-                <label>Team
-                  <select id="teamSelect">
-                    <option value="">Choose a team…</option>
-                  </select>
-                </label>
-                <label>Project (Optional)
-                  <select id="projectSelect">
-                    <option value="">All projects</option>
-                  </select>
-                </label>
-              </div>
-              <div class="two spaced">
-                <label>Ready state name
-                  <input id="ready" value="Ready for ORBIT">
-                </label>
-                <label>In-progress state
-                  <select id="inProgress"><option value="">Select team first</option></select>
-                </label>
-              </div>
-              <div class="two spaced">
-                <label>Review state
-                  <select id="review"><option value="">Select team first</option></select>
-                </label>
-                <div class="team-refresh-cell">
-                  <label>Need to update?</label>
-                  <button id="refreshTeamsBtn" class="secondary btn-sm">Refresh teams</button>
-                </div>
-              </div>
-              <input type="hidden" id="teamKey">
-            </div>
-
-            <!-- Error -->
-            <div id="linearError" class="integration-body hidden">
-              <div class="integration-error-box">
-                <p id="linearErrorText">Connection failed</p>
-                <button id="linearRetryBtn" class="secondary btn-sm">Retry</button>
               </div>
             </div>
           </div>
 
-          <!-- 2. Notion in Settings -->
-          <div class="integration-card" id="notionSettingsCard">
-            <div class="integration-header">
-              <div class="integration-title-group">
-                <span class="integration-icon icon-notion">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                    <path d="M4.459 4.208c.746.606 1.026.56 2.428.466l13.215-.793c.28 0 .047-.28-.093-.373L17.65 2.155c-.466-.373-.933-.56-1.587-.56L3.992 2.62c-.653.047-.793.42-.513.653l.98 1.935zm.933 3.639v12.455c0 .886.467 1.213 1.4 1.12l14.474-.84c.933-.047 1.12-.56 1.12-1.306V6.727c0-.7-.373-1.073-1.026-1.026l-14.8 1.026c-.84.047-1.168.42-1.168 1.12zm13.169.746c.093.42.047.84-.373.886l-.793.14v10.123c-.56.327-1.12.513-1.587.513-.746 0-1.026-.233-1.447-.84l-5.6-8.723v8.117l1.587.373c.093.42.047.84-.373.886l-3.593.233c-.093-.42-.047-.84.373-.886l.933-.233V8.825l-1.306-.14c-.093-.42-.047-.84.373-.886l3.78-.233 5.88 8.91V8.545l-1.307-.14c-.093-.42-.047-.84.373-.886l3.453-.233z"/>
-                  </svg>
-                </span>
-                <div>
-                  <h3>Notion</h3>
-                  <p class="integration-purpose">Product specs &amp; documentation workspace</p>
-                </div>
-              </div>
-              <span id="notionStatus" class="pill not-connected">Not connected</span>
-            </div>
-
-            <!-- Disconnected -->
-            <div id="notionDisconnected" class="integration-body">
-              <div class="connect-action-row">
-                <input id="notionToken" type="password" placeholder="Paste Notion integration token (secret_...)">
-                <button id="notionConnectBtn" class="btn-primary">Connect Notion</button>
-              </div>
-              <p class="muted small-note">Create an internal integration in Notion: Settings &rarr; Connections &rarr; Develop or visit notion.so/my-integrations.</p>
-            </div>
-
-            <!-- Waiting -->
-            <div id="notionWaiting" class="integration-body hidden">
-              <div class="integration-waiting-row">
-                <div class="spinner"></div>
-                <div class="waiting-text">
-                  <b>Connecting to Notion…</b>
-                  <small class="muted">Verifying integration token and permissions…</small>
-                </div>
-                <button id="notionCancelBtn" class="secondary btn-sm">Cancel</button>
-              </div>
-            </div>
-
-            <!-- Connected -->
-            <div id="notionConnected" class="integration-body hidden">
-              <div class="connected-summary-row">
-                <div class="connected-identity">
-                  <span class="connected-dot"></span>
-                  <b id="settingsNotionWorkspaceName">Notion Workspace</b>
-                  <span class="muted" id="settingsNotionBotName">Integration</span>
-                </div>
-                <button id="notionDisconnectBtn" class="danger btn-sm">Disconnect</button>
-              </div>
-              <div class="two spaced">
-                <label>Authorized Database
-                  <select id="settingsNotionDbSelect">
-                    <option value="">Select database…</option>
-                  </select>
-                </label>
-                <label>Authorized Page (Optional)
-                  <select id="settingsNotionPageSelect">
-                    <option value="">Select page…</option>
-                  </select>
-                </label>
-              </div>
-              <div class="permissions-notice">
-                <small class="muted">Permissions: Read-only access to authorized resources</small>
-              </div>
-            </div>
-
-            <!-- Error -->
-            <div id="notionError" class="integration-body hidden">
-              <div class="integration-error-box">
-                <p id="notionErrorText">Connection failed</p>
-                <button id="notionRetryBtn" class="secondary btn-sm">Retry</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- 3. Obsidian in Settings -->
-          <div class="integration-card" id="obsidianSettingsCard">
-            <div class="integration-header">
-              <div class="integration-title-group">
-                <span class="integration-icon icon-obsidian">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                    <path d="M18.88 12.35l-3.32-8.31a1.2 1.2 0 00-.73-.7l-4.42-1.3a1.2 1.2 0 00-1.18.34L3.6 7.7a1.2 1.2 0 00-.28 1.14l2.12 7.7a1.2 1.2 0 00.56.74l8.15 4.54a1.2 1.2 0 001.29-.08l4.42-3.46a1.2 1.2 0 00.38-1.1l-1.36-4.83zm-7.65-8.24l3.14.92-2.18 5.46-3.7-2.12 2.74-4.26zm-4.72 5.09l3.52 2.02-3.1 7.76-1.52-5.52 1.1-4.26zm6.81 10.96l-6.3-3.51 2.92-7.3 5.02 2.87-1.64 7.94zm2.84-2.85l-.94-4.57 2.02-5.06 1.02 3.65-2.1 5.98z"/>
-                  </svg>
-                </span>
-                <div>
-                  <h3>Obsidian</h3>
-                  <p class="integration-purpose">Local knowledge base &amp; markdown notes</p>
-                </div>
-              </div>
-              <span id="obsidianStatus" class="pill not-connected">Not connected</span>
-            </div>
-
-            <!-- Disconnected -->
-            <div id="obsidianDisconnected" class="integration-body">
-              <div class="connect-action-row">
-                <select id="obsidianVaultSelect">
-                  <option value="">Choose discovered vault…</option>
-                </select>
-                <button id="obsidianConnectBtn" class="btn-primary">Connect Vault</button>
-              </div>
-              <div class="secondary-action-row">
-                <button id="obsidianBrowseBtn" class="secondary btn-sm">Or choose custom vault folder…</button>
-              </div>
-            </div>
-
-            <!-- Waiting -->
-            <div id="obsidianWaiting" class="integration-body hidden">
-              <div class="integration-waiting-row">
-                <div class="spinner"></div>
-                <div class="waiting-text">
-                  <b>Connecting vault…</b>
-                  <small class="muted">Validating local directory and read-only access…</small>
-                </div>
-              </div>
-            </div>
-
-            <!-- Connected -->
-            <div id="obsidianConnected" class="integration-body hidden">
-              <div class="connected-summary-row">
-                <div class="connected-identity">
-                  <span class="connected-dot"></span>
-                  <b id="settingsObsidianVaultName">Vault Name</b>
-                  <small class="muted mono-path" id="settingsObsidianVaultPath">C:\Vault</small>
-                </div>
-                <button id="obsidianDisconnectBtn" class="danger btn-sm">Disconnect</button>
-              </div>
-              <div class="permissions-notice">
-                <small class="success-text">🔒 Read-only mode active: ORBIT will never modify, reorganize, or delete vault files.</small>
-              </div>
-            </div>
-
-            <!-- Error -->
-            <div id="obsidianError" class="integration-body hidden">
-              <div class="integration-error-box">
-                <p id="obsidianErrorText">Vault validation failed</p>
-                <button id="obsidianRetryBtn" class="secondary btn-sm">Retry</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- 4. GitHub in Settings -->
-          <div class="integration-card" id="githubSettingsCard">
-            <div class="integration-header">
-              <div class="integration-title-group">
-                <span class="integration-icon icon-github">
-                  <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                    <path d="M12 2C6.477 2 2 6.484 2 12.017c0 4.425 2.865 8.18 6.839 9.504.5.092.682-.217.682-.483 0-.237-.008-.868-.013-1.703-2.782.605-3.369-1.343-3.369-1.343-.454-1.158-1.11-1.466-1.11-1.466-.908-.62.069-.608.069-.608 1.003.07 1.53 1.032 1.53 1.032.892 1.53 2.341 1.088 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.113-4.555-4.951 0-1.093.39-1.988 1.029-2.688-.103-.253-.446-1.272.098-2.65 0 0 .84-.27 2.75 1.026A9.564 9.564 0 0112 6.844c.85.004 1.705.115 2.504.337 1.909-1.296 2.747-1.027 2.747-1.027.546 1.379.202 2.398.1 2.651.64.7 1.028 1.595 1.028 2.688 0 3.848-2.339 4.695-4.566 4.943.359.309.678.92.678 1.855 0 1.338-.012 2.419-.012 2.747 0 .268.18.58.688.482A10.019 10.019 0 0022 12.017C22 6.484 17.522 2 12 2z"/>
-                  </svg>
-                </span>
-                <div>
-                  <h3>GitHub</h3>
-                  <p class="integration-purpose">Source code repositories &amp; pull requests</p>
-                </div>
-              </div>
-              <span id="githubStatus" class="pill not-connected">Not connected</span>
-            </div>
-
-            <!-- Disconnected -->
-            <div id="githubDisconnected" class="integration-body">
-              <div id="githubCliPrompt" class="github-cli-prompt hidden">
-                <p id="githubCliText">GitHub CLI detected on PC. Click below to connect with 1 click.</p>
-              </div>
-              <div class="connect-action-row">
-                <input id="githubToken" type="password" placeholder="GitHub Personal Access Token (Optional if gh CLI is logged in)">
-                <button id="githubConnectBtn" class="btn-primary">Connect GitHub</button>
-              </div>
-            </div>
-
-            <!-- Waiting -->
-            <div id="githubWaiting" class="integration-body hidden">
-              <div class="integration-waiting-row">
-                <div class="spinner"></div>
-                <div class="waiting-text">
-                  <b>Connecting to GitHub…</b>
-                  <small class="muted">Verifying identity and repository permissions…</small>
-                </div>
-                <button id="githubCancelBtn" class="secondary btn-sm">Cancel</button>
-              </div>
-            </div>
-
-            <!-- Connected -->
-            <div id="githubConnected" class="integration-body hidden">
-              <div class="connected-summary-row">
-                <div class="connected-identity">
-                  <span class="connected-dot"></span>
-                  <b id="settingsGithubUserName">@user</b>
-                  <span class="muted" id="settingsGithubRealName">Name</span>
-                </div>
-                <button id="githubDisconnectBtn" class="danger btn-sm">Disconnect</button>
-              </div>
-              <div class="spaced">
-                <label>Scoped Repository
-                  <select id="settingsGithubRepoSelect">
-                    <option value="">Select repository…</option>
-                  </select>
-                </label>
-              </div>
-              <div class="permissions-notice">
-                <small class="muted" id="settingsGithubPermNotice">Permissions: git push &amp; PR creation restricted by safety rules</small>
-              </div>
-            </div>
-
-            <!-- Error -->
-            <div id="githubError" class="integration-body hidden">
-              <div class="integration-error-box">
-                <p id="githubErrorText">Connection failed</p>
-                <button id="githubRetryBtn" class="secondary btn-sm">Retry</button>
+          <!-- Step 5: First Task -->
+          <div class="wizard-step">
+            <div class="step-num">5</div>
+            <div class="step-content">
+              <h3>First Task in PLAN.md</h3>
+              <p class="step-desc">What should the agent build first? State concrete acceptance criteria.</p>
+              <div class="form-group">
+                <input id="setupFirstTaskInput" class="form-input" placeholder="e.g. Implement user authentication endpoints with JWT tokens" value="">
               </div>
             </div>
           </div>
         </div>
-      </article>
 
-      <!-- Permissions & Autonomy -->
-      <article class="panel wide">
-        <h2>Permissions &amp; autonomy</h2>
-        <label>Autonomy level
-          <select id="autonomyLevel">
-            <option value="supervised">Supervised — approve every task before it runs</option>
-            <option value="delegated">Delegated — auto-run, with daily cap and hours</option>
-            <option value="autonomous">Autonomous — auto-run, no cap or hours</option>
-          </select>
-        </label>
-        <p id="autonomyDescription" class="muted"></p>
-        <div class="two">
-          <label class="check"><input type="checkbox" id="allowClaim"> Let ORBIT claim eligible tasks (move them to In Progress)</label>
-          <label class="check"><input type="checkbox" id="allowAgentRun"> Let the agent actually run (master switch)</label>
-          <label class="check"><input type="checkbox" id="allowComment"> Post result/summary comments back to Linear</label>
-          <label class="check"><input type="checkbox" id="allowReviewTransition"> Move finished tasks to the Review state</label>
-          <label>Max tasks / day (0 = unlimited)<input id="maxTasksPerDay" value="10"></label>
-          <label class="check"><input type="checkbox" id="requireApprovalBeforeReview"> Pause once for approval before finalizing (applies in every tier, including Autonomous)</label>
+        <div class="wizard-footer">
+          <button id="btnSaveSetup" class="btn btn-primary" style="padding: 10px 24px; font-size: 14px;">
+            <svg class="ui-icon" width="16" height="16"><use href="#icon-check"/></svg>
+            <span>Save Setup &amp; Initialize Project</span>
+          </button>
         </div>
-        <div class="two">
-          <label class="check"><input type="checkbox" id="allowPush"> Allow the agent to <code>git push</code></label>
-          <label class="check"><input type="checkbox" id="allowPullRequest"> Allow the agent to open pull requests (<code>gh pr create</code>)</label>
-          <label class="check"><input type="checkbox" id="allowMerge"> Allow the agent to <code>git merge</code></label>
-        </div>
-        <div class="two">
-          <label class="check"><input type="checkbox" id="useActiveHours"> Restrict auto-run to active hours</label>
-          <label>Active hours<span class="hours-row"><input id="activeStart" placeholder="09:00"><input id="activeEnd" placeholder="18:00"></span></label>
-        </div>
-        <div class="banner">Deployment and force-push are always blocked and cannot be enabled. Every claimed task runs behind a wrapper that intercepts <code>git push</code>/<code>git merge</code>/<code>gh pr create</code> at the process level according to the toggles above.</div>
-      </article>
+      </div>
+    </div>
+  </section>
 
-      <!-- Schedule -->
-      <article class="panel">
-        <h2>Schedule</h2>
-        <label class="check"><input type="checkbox" id="scheduleEnabled"> Only run within a window</label>
-        <label>Window<span class="hours-row"><input id="scheduleStart" placeholder="09:00"><input id="scheduleEnd" placeholder="18:00"></span></label>
-        <label class="check"><input type="checkbox" id="scheduleWeekdays"> Weekdays only (Mon–Fri)</label>
-        <p class="muted">Auto-starts the worker at the window's start and stops it at the end — but a task already running always finishes first; it never gets cut off mid-task.</p>
-      </article>
+  <!-- TAB 3: Policy & Guards -->
+  <section id="panePolicy" class="tab-pane">
+    <div class="panel" style="max-width: 920px; margin: 0 auto; width: 100%;">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <svg class="ui-icon" width="18" height="18"><use href="#icon-policy"/></svg>
+          <h2>Policy &amp; Guardrails (orbit.policy.json)</h2>
+        </div>
+        <button id="btnSavePolicy" class="btn btn-primary btn-sm">
+          <svg class="ui-icon" width="13" height="13"><use href="#icon-check"/></svg>
+          <span>Save Changes</span>
+        </button>
+      </div>
 
-      <!-- Background behavior -->
-      <article class="panel">
-        <h2>Background behavior</h2>
-        <label class="check"><input type="checkbox" id="startup"> Start when I sign in to Windows</label>
-        <label class="check"><input type="checkbox" id="auto" checked> Poll authorized tasks automatically</label>
-        <p class="muted">Closing this window minimizes ORBIT to the system tray. Use the tray menu to pause, configure, or quit.</p>
-      </article>
+      <div class="panel-body">
+        <p class="section-intro">Configure safety boundaries and engine caps. In v0.7.0, all external commands run through process-level shims.</p>
+
+        <div class="form-group">
+          <label class="form-label">ACTIVE CODING AGENT</label>
+          <div id="policyAgentGrid" class="agent-grid">
+            <!-- Dynamic Agent Cards -->
+          </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 14px;">
+          <div class="form-group">
+            <label class="form-label">VERIFICATION COMMAND</label>
+            <input id="inputVerify" class="form-input" placeholder="npm test" value="npm test">
+            <small style="color: var(--text-dim); font-size: 11px;">Must pass for a task to be marked done.</small>
+          </div>
+          <div class="form-group">
+            <label class="form-label">APPROVAL STYLE</label>
+            <select id="selectApproval" class="form-input">
+              <option value="none">Unattended (none - runs continuously)</option>
+              <option value="each-task">Supervised (each-task - pause for review)</option>
+            </select>
+            <small style="color: var(--text-dim); font-size: 11px;">Pause for approval before each commit.</small>
+          </div>
+        </div>
+
+        <!-- Safety Guardrails -->
+        <div style="margin-top: 24px;">
+          <div class="section-title-row">
+            <span class="form-label" style="margin: 0;">PROCESS-LEVEL GUARDRAILS (HARD BLOCKS)</span>
+            <span class="badge-tag done" style="font-size: 10.5px;">Embedded __guard Shim Active</span>
+          </div>
+          <p class="step-desc" style="margin-bottom: 12px;">ORBIT places an interceptor wrapper in front of git and gh on PATH during agent runs to prevent unapproved pushes or merges.</p>
+
+          <div class="switch-box">
+            <div class="switch-row">
+              <div class="switch-desc">
+                <span class="switch-title">Block Git Push</span>
+                <span class="switch-sub">Prevents the coding agent from pushing branches or commits to remote repositories.</span>
+              </div>
+              <label class="toggle"><input type="checkbox" id="guardPush" checked><span class="slider"></span></label>
+            </div>
+            <div class="switch-row">
+              <div class="switch-desc">
+                <span class="switch-title">Block Git Merge</span>
+                <span class="switch-sub">Prevents the agent from merging branches into main or master.</span>
+              </div>
+              <label class="toggle"><input type="checkbox" id="guardMerge" checked><span class="slider"></span></label>
+            </div>
+            <div class="switch-row">
+              <div class="switch-desc">
+                <span class="switch-title">Block PR Creation</span>
+                <span class="switch-sub">Blocks GitHub CLI (`gh pr create`) from opening automated pull requests.</span>
+              </div>
+              <label class="toggle"><input type="checkbox" id="guardPr" checked><span class="slider"></span></label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Limits -->
+        <div style="margin-top: 24px;">
+          <label class="form-label">ENGINE SAFETY LIMITS</label>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px;">
+            <div class="form-group">
+              <label style="font-size: 11.5px; color: var(--text-muted);">Max Attempts / Task</label>
+              <input id="limitMaxAttempts" type="number" class="form-input" value="3" min="1" max="10">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 11.5px; color: var(--text-muted);">Task Timeout (Minutes)</label>
+              <input id="limitTaskTimeout" type="number" class="form-input" value="30" min="5" max="180">
+            </div>
+            <div class="form-group">
+              <label style="font-size: 11.5px; color: var(--text-muted);">Stall Timeout (Minutes)</label>
+              <input id="limitStall" type="number" class="form-input" value="10" min="2" max="60">
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 4: Adapter Canary Tests -->
+  <section id="paneCanary" class="tab-pane">
+    <div class="panel" style="max-width: 920px; margin: 0 auto; width: 100%;">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <svg class="ui-icon" width="18" height="18"><use href="#icon-canary"/></svg>
+          <h2>Adapter Conformance Canary (orbit adapter test)</h2>
+        </div>
+      </div>
+      <div class="panel-body">
+        <p class="section-intro">Run an end-to-end canary task (isolated sandbox write &amp; verification proof) to verify that an agent CLI is properly installed and authorized to run unattended.</p>
+        
+        <div id="canaryGrid" class="canary-grid">
+          <!-- Dynamically populated cards for each agent -->
+        </div>
+
+        <div id="canaryConsoleCard" class="terminal-container" style="margin-top: 20px; display: none;">
+          <div class="terminal-toolbar">
+            <span class="terminal-label" id="canaryConsoleTitle">Canary Test Output</span>
+          </div>
+          <div id="canaryConsoleBox" class="terminal-box" style="height: 180px;"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 5: Doctor Diagnostics -->
+  <section id="paneDoctor" class="tab-pane">
+    <div class="panel" style="max-width: 920px; margin: 0 auto; width: 100%;">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <svg class="ui-icon" width="18" height="18"><use href="#icon-doctor"/></svg>
+          <h2>System Diagnostics &amp; Health Check (orbit doctor)</h2>
+        </div>
+        <button id="btnRefreshDoctor" class="btn btn-secondary btn-sm">
+          <svg class="ui-icon" width="13" height="13"><use href="#icon-updates"/></svg>
+          <span>Re-check System</span>
+        </button>
+      </div>
+      <div class="panel-body">
+        <p class="section-intro">Checks the Node.js SEA runtime, Git installation, repository integrity, PLAN.md validity, and agent CLI availability.</p>
+        <div id="doctorGrid" class="doctor-grid">
+          <!-- Dynamically populated doctor items -->
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 6: Morning Report -->
+  <section id="paneReport" class="tab-pane">
+    <div class="panel" style="max-width: 920px; margin: 0 auto; width: 100%;">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <svg class="ui-icon" width="18" height="18"><use href="#icon-report"/></svg>
+          <h2>Morning Report (.orbit/report.md)</h2>
+        </div>
+        <div style="display: flex; gap: 8px;">
+          <button id="btnRefreshReport" class="btn btn-secondary btn-sm">
+            <svg class="ui-icon" width="13" height="13"><use href="#icon-updates"/></svg>
+            <span>Refresh</span>
+          </button>
+          <button id="btnOpenReportFile" class="btn btn-secondary btn-sm">
+            <span>Open in Editor</span>
+          </button>
+        </div>
+      </div>
+      <div class="panel-body">
+        <div id="reportBox" class="report-view">
+          No report generated yet. Run your plan to generate a verified morning report.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 7: Update Center -->
+  <section id="paneUpdates" class="tab-pane">
+    <div class="panel" style="max-width: 820px; margin: 0 auto; width: 100%;">
+      <div class="panel-header">
+        <div class="panel-title-group">
+          <svg class="ui-icon" width="18" height="18"><use href="#icon-updates"/></svg>
+          <h2>In-App Update Center (orbit update)</h2>
+        </div>
+        <button id="btnCheckUpdates" class="btn btn-primary btn-sm">
+          <svg class="ui-icon" width="13" height="13"><use href="#icon-updates"/></svg>
+          <span>Check for Updates</span>
+        </button>
+      </div>
+      <div class="panel-body">
+        <div class="update-hero-card">
+          <div class="update-badge">INSTALLED VERSION</div>
+          <h3 class="update-version-title">ORBIT Desktop v0.7.0</h3>
+          <p class="update-hero-desc">Single-file executable engine, process-level git/gh guard shims, guided setup wizard, and MCP server.</p>
+          <div id="updateStatusText" class="update-status-pill up-to-date">Up to date with GitHub releases</div>
+        </div>
+
+        <div class="changelog-card">
+          <h4 style="font-size: 14px; margin-bottom: 8px; color: var(--text-main);">What's New in v0.7.0:</h4>
+          <ul class="changelog-list">
+            <li><b>Single-File Executable Engine:</b> Node SEA binary with zero external dependencies.</li>
+            <li><b>Embedded Guard Shims:</b> `__guard` intercepts unauthorized remote pushes and PRs.</li>
+            <li><b>Guided Setup Wizard:</b> 5-step interactive wizard with auto-detected test runners.</li>
+            <li><b>In-App Self-Update:</b> Seamless GitHub release checks and atomic replacement on Windows.</li>
+          </ul>
+        </div>
+      </div>
     </div>
   </section>
 </main>
 
-<footer>ORBIT Worker 0.1.0 · Local execution only · No automatic merge or deployment</footer>
+<!-- Add Task Modal -->
+<div id="addTaskModal" class="modal-backdrop">
+  <div class="modal-card">
+    <div class="modal-header">
+      <div style="display: flex; align-items: center; gap: 8px;">
+        <svg class="ui-icon" width="18" height="18"><use href="#icon-plus"/></svg>
+        <h3>Add Task to PLAN.md</h3>
+      </div>
+      <button id="btnCancelAddTask" class="modal-close">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">TASK TITLE</label>
+        <input id="modalTaskTitle" class="form-input" placeholder="e.g. Add rate-limit retry logic to API client" autofocus>
+      </div>
+      <div class="form-group">
+        <label class="form-label">ACCEPTANCE CRITERIA / DETAILS (OPTIONAL)</label>
+        <textarea id="modalTaskDetails" class="form-input" rows="4" placeholder="Detail concrete expectations so the agent knows what 'done' looks like and tests pass."></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button id="btnCancelAddTask2" class="btn btn-secondary">Cancel</button>
+      <button id="btnSubmitAddTask" class="btn btn-primary">
+        <svg class="ui-icon" width="14" height="14"><use href="#icon-plus"/></svg>
+        <span>Add to Plan</span>
+      </button>
+    </div>
+  </div>
+</div>
+
 <div id="toast" class="toast hidden"></div>
+
 <script src="app.js"></script>
 </body>
 </html>

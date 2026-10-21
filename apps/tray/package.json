@@ -1,8 +1,8 @@
 {
-  "name": "orbit-tray",
-  "version": "0.2.0",
+  "name": "orbit-desktop",
+  "version": "0.7.0",
   "private": true,
-  "description": "ORBIT tray shell (legacy v0.2 Linear worker). To be rewired onto the headless engine in v0.5.",
+  "description": "ORBIT Desktop (v0.7.0) - Unattended AI coding agent harness for Claude Code, Codex, Antigravity, OpenCode, Grok Build.",
   "main": "src/main.js",
   "type": "commonjs",
   "scripts": {
@@ -11,15 +11,15 @@
     "dist:win": "electron-builder --win nsis",
     "pack:win": "electron-builder --win dir",
     "test": "node --test tests/*.test.js",
-    "check": "node --check src/main.js && node --check src/preload.js && node --check src/core/discovery.js && node --check src/core/lifecycle.js && node --check src/core/agents.js && node --check src/core/linear.js && node --check src/core/linear-auth.js && node --check src/core/oauth.js && node --check src/core/permissions.js && node --check src/core/schedule.js && node --check src/core/worker.js && node --check src/core/store.js && node --check src/renderer/app.js"
+    "check": "node --check src/main.js && node --check src/preload.js && node --check src/renderer/app.js && node --check src/engine/plan.js && node --check src/engine/policy.js && node --check src/engine/adapters.js && node --check src/engine/engine.js"
   },
   "devDependencies": {
     "electron": "^39.2.7",
     "electron-builder": "^26.7.0"
   },
   "build": {
-    "appId": "com.samjuniors.orbit.worker",
-    "productName": "ORBIT Worker",
+    "appId": "com.samjuniors.orbit.desktop",
+    "productName": "ORBIT Desktop",
     "asar": true,
     "directories": {
       "output": "release"
@@ -39,7 +39,7 @@
           ]
         }
       ],
-      "artifactName": "ORBIT-Worker-Setup-${version}.${ext}"
+      "artifactName": "Orbit-Desktop-Setup-${version}.${ext}"
     },
     "nsis": {
       "oneClick": false,
@@ -47,7 +47,7 @@
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
-      "shortcutName": "ORBIT Worker"
+      "shortcutName": "ORBIT Desktop"
     }
   }
 }

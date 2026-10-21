@@ -17,6 +17,7 @@ const { main: guardMain } = require('../src/engine/guard');
 const { paths, loadState } = require('../src/engine/state');
 const { killAll } = require('../src/engine/process');
 const { spawnSync } = require('node:child_process');
+const { runUpdateCommand, getUpdateNotice, triggerBackgroundCheck } = require('../src/engine/update');
 const pkg = require('../package.json');
 
 const HELP = `orbit ${pkg.version} - run a plan through your coding agent, unattended, with proof.
@@ -26,6 +27,7 @@ Usage: orbit <command> [options]
   setup                guided setup: pick your agent, test command and review style (start here)
   init                 create the template files without asking anything
   doctor               check git, the agent CLI, your policy and your plan
+  update [--check]     check for updates and upgrade ORBIT to the latest version
   add "title" [details]  append a task to PLAN.md (never edits finished ones)
   adapters             list supported agents and which are installed here
   adapter test <agent> run one tiny real task to prove that agent works unattended here
@@ -39,7 +41,8 @@ Usage: orbit <command> [options]
 
 Options: --dir <folder>  --plan <file> (default PLAN.md)  --policy <file> (default orbit.policy.json)
          --verbose (stream agent output)  --plain (no live display)  --yes (skip confirmations)
-Exit codes: 0 all done, 2 a task needs you, 3 stopped by a limit, 1 error.`;
+         --check (update check only)
+Exit codes: 0 all done, 2 a task needs you / update available, 3 stopped by a limit, 1 error.`;
 
 function parseArgs(argv) {
   const o = { _: [], dir: process.cwd(), plan: 'PLAN.md', policy: 'orbit.policy.json', verbose: false, dryRun: false, plain: false, yes: false, global: false, agentsMd: false };
@@ -54,6 +57,8 @@ function parseArgs(argv) {
     else if (a === '--global') o.global = true;
     else if (a === '--agents-md') o.agentsMd = true;
     else if (a === '--yes' || a === '-y') o.yes = true;
+    else if (a === '--check') o.check = true;
+    else if (a === '--force') o.force = true;
     else if (a === '-h' || a === '--help') o.help = true;
     else if (a === '-v' || a === '--version') o.version = true;
     else o._.push(a);
@@ -102,15 +107,27 @@ function doctor(o) {
   console.log('\nOther agents found on this machine:');
   for (const id of ADAPTER_IDS.filter(x => x !== 'generic')) { const e = detect(id); console.log(`  ${e ? 'yes' : ' no'}  ${id}${e ? '  ' + e : ''}`); }
   console.log(bad ? `\n${bad} problem(s) to fix.` : '\nAll good. Try: orbit run --dry-run');
+  const notice = getUpdateNotice(pkg.version);
+  if (notice) console.log(notice);
+  triggerBackgroundCheck(pkg.version);
   return bad ? 1 : 0;
 }
 
 function status(o) {
   const s = loadState(o.dir);
-  if (!s) { console.log('No run yet. Start one with: orbit run'); return 0; }
+  if (!s) {
+    console.log('No run yet. Start one with: orbit run');
+    const notice = getUpdateNotice(pkg.version);
+    if (notice) console.log(notice);
+    triggerBackgroundCheck(pkg.version);
+    return 0;
+  }
   console.log(`Run ${s.runId}  branch ${s.branch}  status ${s.status}${s.stopReason ? ' (' + s.stopReason + ')' : ''}`);
   const plan = parsePlan(fs.readFileSync(path.join(o.dir, o.plan), 'utf8'));
   for (const t of plan.tasks) { const x = s.tasks[t.id]; console.log(`  ${(x?.status || (t.done ? 'done' : 'pending')).padEnd(18)} ${t.id}: ${t.title}${x?.attempts ? `  (${x.attempts} attempt${x.attempts > 1 ? 's' : ''})` : ''}`); }
+  const notice = getUpdateNotice(pkg.version);
+  if (notice) console.log(notice);
+  triggerBackgroundCheck(pkg.version);
   return 0;
 }
 
@@ -128,7 +145,29 @@ async function main() {
   const cmd = o._[0];
   if (o.version) { console.log(pkg.version); return 0; }
   if (o.help || cmd === 'help') { console.log(HELP); return 0; }
-  if (!cmd) { console.log(nextStep({ root: o.dir, planFile: o.plan, policyFile: o.policy }).join('\n')); return 0; }
+  if (!cmd) {
+    console.log(nextStep({ root: o.dir, planFile: o.plan, policyFile: o.policy }).join('\n'));
+    const notice = getUpdateNotice(pkg.version);
+    if (notice) console.log(notice);
+    triggerBackgroundCheck(pkg.version);
+    return 0;
+  }
+  if (cmd === 'update') {
+    const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
+    const ask = q => (o.yes ? Promise.resolve('y') : new Promise(r => rl.question(q, a => r(a.trim()))));
+    try {
+      return await runUpdateCommand({
+        currentVersion: pkg.version,
+        checkOnly: o.check,
+        yes: o.yes,
+        force: o.force || false,
+        ask,
+        say: m => console.log(m)
+      });
+    } finally {
+      rl.close();
+    }
+  }
   if (cmd === 'init') { init(o); return 0; }
   if (cmd === 'setup') {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });

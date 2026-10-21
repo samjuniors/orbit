@@ -1,5 +1,31 @@
 const { contextBridge, ipcRenderer } = require('electron');
+
 contextBridge.exposeInMainWorld('orbit', {
+  // v0.7.0 Modern Core API
+  getProjectInfo: () => ipcRenderer.invoke('orbit:get-project-info'),
+  selectProjectDir: () => ipcRenderer.invoke('orbit:select-project-dir'),
+  initProject: () => ipcRenderer.invoke('orbit:init-project'),
+  runSetup: payload => ipcRenderer.invoke('orbit:run-setup', payload),
+  addTask: payload => ipcRenderer.invoke('orbit:add-task', payload),
+  savePolicy: policy => ipcRenderer.invoke('orbit:save-policy', policy),
+  runPlan: () => ipcRenderer.invoke('orbit:run-plan'),
+  stopPlan: () => ipcRenderer.invoke('orbit:stop-plan'),
+  dryRun: () => ipcRenderer.invoke('orbit:dry-run'),
+  approvePlanTask: payload => ipcRenderer.invoke('orbit:approve-plan-task', payload),
+  rejectPlanTask: payload => ipcRenderer.invoke('orbit:reject-plan-task', payload),
+  testAdapter: agentId => ipcRenderer.invoke('orbit:test-adapter', agentId),
+  checkUpdates: () => ipcRenderer.invoke('orbit:check-updates'),
+  openPath: target => ipcRenderer.invoke('orbit:open-path', target),
+  openUrl: target => ipcRenderer.invoke('orbit:open-url', target),
+
+  // Event Listeners for Plan Execution
+  onPlanEvent: callback => ipcRenderer.on('orbit:plan-event', (_event, data) => callback(data)),
+  onPlanLog: callback => ipcRenderer.on('orbit:plan-log', (_event, data) => callback(data)),
+  onPlanOutput: callback => ipcRenderer.on('orbit:plan-output', (_event, data) => callback(data)),
+  onPlanFinished: callback => ipcRenderer.on('orbit:plan-finished', (_event, data) => callback(data)),
+  onPlanError: callback => ipcRenderer.on('orbit:plan-error', (_event, data) => callback(data)),
+
+  // Backward compatibility methods for tray & existing tests
   getState: () => ipcRenderer.invoke('orbit:get-state'),
   discover: () => ipcRenderer.invoke('orbit:discover'),
   browseProject: () => ipcRenderer.invoke('orbit:browse-project'),
@@ -28,8 +54,6 @@ contextBridge.exposeInMainWorld('orbit', {
   stop: () => ipcRenderer.invoke('orbit:stop'),
   pause: value => ipcRenderer.invoke('orbit:pause', value),
   setStartup: value => ipcRenderer.invoke('orbit:set-startup', value),
-  openPath: value => ipcRenderer.invoke('orbit:open-path', value),
-  openUrl: value => ipcRenderer.invoke('orbit:open-url', value),
   hideWindow: () => ipcRenderer.invoke('orbit:hide-window'),
   completeOnboarding: payload => ipcRenderer.invoke('orbit:complete-onboarding', payload),
   onEvent: callback => ipcRenderer.on('orbit:event', (_event, data) => callback(data)),
