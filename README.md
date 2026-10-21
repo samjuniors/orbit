@@ -1,124 +1,285 @@
 # ORBIT
 
-**Give your coding agent a plan, go away, come back to verified work.**
+**A local control plane for coding agents.**
 
-ORBIT runs a plain-markdown plan through the coding agent you already use (Claude Code, Codex, Antigravity, OpenCode, Grok Build, or any CLI). One small task per fresh agent session, in an isolated git worktree, checked by *your* tests before it counts as done. It stays inside limits you set, survives crashes and reboots, and leaves a report instead of a mystery.
+Turn a project plan into a sequence of small, isolated, verifiable coding tasks. ORBIT coordinates the agent you already use, runs your verification command, manages retries and resumable progress, and keeps consequential Git actions behind explicit policy.
 
-```
-$ orbit run
-[orbit] New run: working on branch orbit/todo-app-mvge9sd8.
-[orbit] T1 attempt 1/3: running claude-code
-[orbit] T1: verification passed.
-[orbit] T1 done (78789882).
-[orbit] T2 attempt 1/3: running claude-code
-[orbit] T2: verification failed.            <- the failure is fed back to the agent
-[orbit] T2 attempt 2/3: running claude-code
-[orbit] T2: verification passed.
-[orbit] Run done. Report: .orbit/report.md
-```
+Instead of handing an agent a huge request and hoping for the best, give ORBIT a Markdown plan. It runs one task at a time in a dedicated Git worktree, checks the result against your command, records what happened, and tells you when it needs a human decision.
 
-> **Status: early preview.** The CLI/engine version is tracked in the root `package.json`; the legacy desktop app is versioned independently in `apps/tray/package.json`. The engine is tested (40 tests including real git, a pseudo-terminal check of the live display, and a scriptable fake agent). Adapter flags come from vendor docs; prove yours with `orbit adapter test <agent>`.
+[![CI](https://github.com/samjuniors/orbit/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/samjuniors/orbit/actions/workflows/ci.yml)
+[![Windows certification](https://github.com/samjuniors/orbit/actions/workflows/windows-certification.yml/badge.svg?branch=main)](https://github.com/samjuniors/orbit/actions/workflows/windows-certification.yml)
+[![Latest release](https://img.shields.io/github/v/release/samjuniors/orbit)](https://github.com/samjuniors/orbit/releases/latest)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-## Downloads & Releases
+> **Project status:** early preview. ORBIT is actively evolving. Review the [known limitations](#boundaries-and-limitations) and verify your chosen agent locally before unattended use.
 
-Official pre-built Windows packages are published on [GitHub Releases](https://github.com/samjuniors/orbit/releases/latest). Open the latest release to choose the CLI installer, standalone executable, or legacy desktop installer. Asset names are versioned with their respective package metadata.
+## The problem ORBIT solves
 
-The CLI installer configures PATH, Start Menu shortcuts, and an uninstaller. The legacy desktop/tray installer is a separate Electron application with its own install lifecycle. See [Windows certification](docs/WINDOWS-CERTIFICATION.md) for the tested boundaries.
+Coding agents are capable, but long-running work is difficult to supervise reliably. A large task can lose context, stall on an interactive prompt, repeat a failed approach, hit usage limits, or claim completion without passing the project's tests.
 
-## Why
+ORBIT adds an execution loop around the agent:
 
-Unattended agents fail in boring, expensive ways: they stall on a prompt nobody answers, loop on a failing step, hit a rate limit at 2am and sit there, report "done" when it isn't, or push something you never approved. The vendor apps solve some of this for their own agent. ORBIT is the small, local, open-source layer that works the same for *any* agent CLI:
-
-| Problem | What ORBIT does |
+| Concern | ORBIT's approach |
 |---|---|
-| "Done" that isn't | A task only counts when **your** `verify` command passes. No verify command = it refuses to run (unless you opt out, and the report says so). |
-| Agent stalls on a question | Told it is non-interactive; if it goes silent for `stallMin` it is killed and retried with context. |
-| Failing loops | Retry cap per task, task timeout, run-time cap, task cap. Failures are fed back, not repeated blindly. |
-| Rate / usage limits | Detects them, waits, retries **without** burning an attempt. |
-| Crash, reboot, closed lid | State is saved atomically after every step. `orbit run` again resumes in the same worktree. |
-| Pushes, merges, PRs you didn't want | Blocked by default via a command guard on the agent's `PATH`. Force-push and deploys can never be enabled. |
-| Reviewing a pile of changes | One commit per task on its own branch, a report with proof, optional approval after every task. |
-| Context rot over many days | Each task starts a fresh session; continuity comes from the plan, the git history and short notes. |
+| Oversized requests | Break work into explicit Markdown tasks with checkable acceptance criteria. |
+| Risk to the current checkout | Run work in an isolated Git worktree and task branch. |
+| Unverified completion | Run the project's configured verification command; a task does not pass just because the agent says it is done. |
+| Stalls and repeated failures | Apply per-task timeouts, output-stall detection, bounded retries, and failure feedback. |
+| Usage limits | Recognize supported rate-limit signals and wait/retry within configured limits. |
+| Lost progress | Persist run state and resume the same worktree after interruption. |
+| Unreviewed changes | Keep push, merge, and PR creation blocked by default; optionally pause for human approval after each task. |
+| Long sessions and context drift | Start a fresh agent session for each task and carry forward concise project/task context. |
+| Unclear outcomes | Write a report with task status, attempts, verification results, and blockers. |
 
-## Quick start (first run, safe)
+## How it works
 
-Needs Node 20+, git, and one coding-agent CLI that is installed and signed in. Not on npm yet.
+1. **Describe the work.** Write a `PLAN.md` with small tasks and concrete definitions of done.
+2. **Configure the agent and policy.** Choose an installed agent CLI, its arguments, a verification command, approval behavior, and execution limits.
+3. **Preview the next task.** `orbit run --dry-run` shows the prompt without launching the agent.
+4. **Execute in isolation.** ORBIT creates or resumes a dedicated worktree and starts a fresh agent process for the next unfinished task.
+5. **Verify the result.** ORBIT checks for changes and runs your verification command. Failures are returned to the agent within the retry limit.
+6. **Review and continue.** Depending on policy, ORBIT commits a verified task or waits for your approval. It repeats until the plan is complete, blocked, or a limit is reached.
+7. **Inspect the evidence.** Use `orbit status` and `orbit report`; the detailed report is saved under `.orbit/`.
 
-1. **Install the command.** Windows: double-click `scripts/install-windows.cmd`. Anywhere: `npm link` in this folder. (Without it, run `node /path/to/orbit/bin/orbit.js` wherever these steps say `orbit`.)
-2. **Open your project** in any terminal (PowerShell, cmd, Git Bash, macOS/Linux shell). Try a throwaway project first.
-3. **Run `orbit setup`.** A one-minute guided setup: it creates git if missing, finds your agents, suggests your test command, asks how you want to review, and writes the config and a starter `PLAN.md`. It can then test your agent for you.
-4. **Open `PLAN.md`** and make the tasks concrete (one checkbox each, with acceptance criteria).
-5. **Preview:** `orbit run --dry-run` prints the exact prompt the agent would get. Nothing runs.
-6. **Run:** `orbit run`. A short live checklist shows progress. If something needs you it becomes one card telling you what to do (approvals can be answered right there with `y`/`n`).
-7. **Come back later:** type `orbit` for the single next step, `orbit report` for what passed with proof. Your own checkout is never touched; merge the `orbit/...` branch when you're happy.
+```text
+PLAN.md
+   |
+   v
+ORBIT policy + limits
+   |
+   v
+Isolated Git worktree
+   |
+   v
+Fresh coding-agent session
+   |
+   v
+Project verification command
+   |
+   +---- failed ----> bounded retry with failure context
+   |
+   +---- passed ----> commit / human approval checkpoint
+   |
+   v
+Next task or final report
+```
 
-If your computer sleeps or crashes mid-run, run `orbit run` again: it resumes in the same worktree. Use `--plain` for ordinary log lines (CI, logs).
+## Quick start
 
-`PLAN.md` is just markdown ([format](docs/WRITING-TASKS.md)):
+### Requirements
+
+- Node.js 20 or newer for source/Node installation.
+- Git.
+- At least one supported coding-agent CLI installed and authenticated.
+- A project verification command (for example, `npm test`, `pytest`, or a project-specific script). Verification is required unless you explicitly enable unverified completion.
+
+### Install
+
+**Windows:** run `scripts/install-windows.cmd` from a checkout.
+
+**Node.js installation:** from the repository root:
+
+```bash
+npm link
+```
+
+Or run the CLI directly with `node /path/to/orbit/bin/orbit.js`.
+
+**Standalone Windows downloads:** choose the CLI installer, standalone executable, or desktop package from [GitHub Releases](https://github.com/samjuniors/orbit/releases/latest). These are separate products; see [Windows certification](docs/WINDOWS-CERTIFICATION.md) for exactly what is tested.
+
+### Set up a project
+
+Open a terminal in the project you want ORBIT to coordinate:
+
+```bash
+orbit setup
+```
+
+The guided setup helps select an agent, configure verification and review behavior, and create a starter `PLAN.md` and `orbit.policy.json`. Then:
+
+```bash
+orbit doctor
+orbit run --dry-run
+orbit run
+```
+
+Use a throwaway project for your first run. ORBIT does not modify your original checkout during task execution; work happens in its managed worktree.
+
+If the computer sleeps, the terminal closes, or a run is interrupted, invoke `orbit run` again to resume. Inspect progress with:
+
+```bash
+orbit status
+orbit report
+```
+
+## Write a good plan
+
+A plan is ordinary Markdown. Each checkbox should describe one independently verifiable task.
 
 ```markdown
-# Todo app
-Stack: TypeScript + Vite, vitest for tests. Keep components small.
+# Example: small web application
 
-- [ ] Scaffold the project
-  Vite + TS, one passing smoke test, `npm test` works.
-- [ ] Data model and storage
-  Todo type, add/toggle/delete functions in src/todos.ts, unit tested.
-- [ ] List UI
-  Render todos, add form, toggle checkbox. No styling yet.
+Stack: TypeScript, Vite, and Vitest.
+
+- [ ] Create the application skeleton
+  Set up Vite and TypeScript. Add one passing smoke test.
+
+- [ ] Implement the data model
+  Add the item type and create, update, and delete functions.
+  Cover each function with unit tests.
+
+- [ ] Build the list interface
+  Render items and add a form. Verify the main interaction.
 ```
 
-Append tasks any time, even mid-run; they are picked up. Nothing is ever deleted from your plan.
+Keep tasks small enough to complete and verify in one focused agent session. Include constraints, relevant files, acceptance criteria, and the exact command that proves the work. See [Writing tasks that finish](docs/WRITING-TASKS.md).
 
-## Commands
+Tasks can be appended while a run is in progress. ORBIT preserves completed plan entries; it does not silently remove tasks.
 
-`orbit` (what next?) · `setup` · `init` · `doctor` · `adapters` · `adapter test <agent>` · `run [--dry-run] [--plain] [--verbose]` · `status` · `report` · `add "title"` · `approve <id>` · `reject <id> "why"` · `mcp` · `install-skill`. Exit codes: `0` all done, `2` a task needs you, `3` stopped by a limit, `1` error.
+## Agents and integrations
 
-## Policy (`orbit.policy.json`)
+ORBIT launches command-line agents through adapters. The built-in adapter list currently includes:
+
+| Adapter | CLI |
+|---|---|
+| Claude Code | `claude` |
+| OpenAI Codex | `codex` |
+| Antigravity | `agy` / `antigravity` |
+| OpenCode | `opencode` |
+| Grok Build | `grok` |
+| Generic | Your configured command |
+
+**Adapter availability is not a blanket compatibility guarantee.** CLI flags and unattended permissions change between vendor versions. Run `orbit doctor`, inspect the agent's current help, and use:
+
+```bash
+orbit adapters
+orbit adapter test <agent>
+```
+
+The adapter test runs a small real task on your machine. It uses your agent's quota. See [Adapters](docs/ADAPTERS.md).
+
+ORBIT can also be operated from an AI assistant:
+
+- **Claude Code skill:** `orbit install-skill`
+- **AGENTS.md integration:** `orbit install-skill --agents-md`
+- **MCP server:** `orbit mcp` exposes tools for next step, status, report, adding tasks, and human approval/rejection.
+
+See [Integrations](docs/INTEGRATIONS.md).
+
+## Policy and human control
+
+The project-level `orbit.policy.json` controls the agent, verification, approval mode, limits, and guarded Git actions.
+
+Example:
 
 ```json
 {
   "agent": "claude-code",
   "agentArgs": ["--allowedTools", "Edit,Bash(npm test)"],
   "verify": "npm test",
-  "approval": "none",
-  "limits": { "maxAttempts": 3, "taskTimeoutMin": 30, "stallMin": 10, "maxTasks": 0, "maxRuntimeMin": 480 },
-  "rules": { "git.push": "block", "git.merge": "block", "pr.create": "block" }
+  "approval": "each-task",
+  "limits": {
+    "maxAttempts": 3,
+    "taskTimeoutMin": 30,
+    "stallMin": 10,
+    "maxTasks": 0,
+    "maxRuntimeMin": 480
+  },
+  "rules": {
+    "git.push": "block",
+    "git.merge": "block",
+    "pr.create": "block"
+  }
 }
 ```
 
-Set `"approval": "each-task"` and ORBIT commits each task, then waits for `orbit approve T1` or `orbit reject T1 "why"` (the agent gets your feedback). Full reference: [docs/POLICY.md](docs/POLICY.md). Supported agents and how to add one: [docs/ADAPTERS.md](docs/ADAPTERS.md).
+With `approval: "each-task"`, ORBIT pauses after a task is verified and committed. A person can then run `orbit approve T1` or `orbit reject T1 "reason"`.
 
-## Traditional Windows Installer & Single Exe
-- **Traditional Windows Installer:** `npm run build:installer` makes `dist\Orbit-Setup.exe` (~24 MB setup wizard with automatic PATH registration, Start Menu shortcuts, and uninstaller in Windows Apps & Features).
-- **Single-File Binary:** `npm run build:exe` makes `dist\orbit.exe` (bundles Node into one executable).
-- **In-App Updates:** Run `orbit update` to check for newer releases and upgrade in place.
-See [docs/BUILDING-EXE.md](docs/BUILDING-EXE.md). Maintainers upgrading from patch files can use [docs/UPGRADE-PROMPT.md](docs/UPGRADE-PROMPT.md); [docs/BUILD-EXE-PROMPT.md](docs/BUILD-EXE-PROMPT.md) has the exe build prompt for an agent.
+Push, merge, and PR creation are blocked by default. Force-push and deploy permissions are locked. See the complete [Policy reference](docs/POLICY.md).
 
-## Use it from inside your agent
+## Commands
 
-`orbit install-skill` adds an ORBIT skill for Claude Code (`--global` for every project, `--agents-md` for Codex-style agents), and `orbit mcp` is an MCP server so an assistant can check progress, add tasks and relay your approvals. An agent that ORBIT itself launched can never approve its own work. Setup and safety notes: [docs/INTEGRATIONS.md](docs/INTEGRATIONS.md).
+| Command | Purpose |
+|---|---|
+| `orbit` | Show the single next action for this project. |
+| `orbit setup` | Guided project setup. |
+| `orbit init` | Create starter plan and policy files without prompts. |
+| `orbit doctor` | Check Git, agent CLI, policy, plan, and verification setup. |
+| `orbit adapters` | List supported adapters and detected CLIs. |
+| `orbit adapter test <agent>` | Run a small real-world adapter check. |
+| `orbit run --dry-run` | Preview the next agent prompt without execution. |
+| `orbit run` | Execute or resume the plan. |
+| `orbit status` | Show task and run status. |
+| `orbit report` | Print the latest run report. |
+| `orbit add "title"` | Append a task to the plan. |
+| `orbit approve <id>` / `orbit reject <id> "why"` | Record a human review decision. |
+| `orbit mcp` | Start the stdio MCP server. |
+| `orbit install-skill` | Install the Claude Code skill. |
+| `orbit update` | Check for and install an ORBIT update. |
 
-## How it works
+Global options include `--dir`, `--plan`, `--policy`, `--plain`, `--verbose`, and `--yes`. Run `orbit --help` for the current CLI reference.
 
-1. Parse `PLAN.md`; create a worktree + branch under `.orbit/` (your checkout is never touched).
-2. For the next task: build a prompt (plan context, finished tasks, short notes, the task, the rules), run the agent with a guard on `PATH`, in a fresh session.
-3. Check the agent changed something, run `verify`. Fail → retry with the failure in the prompt. Pass → commit, tick the plan in the worktree.
-4. Repeat until done, blocked (needs you), or a limit is hit. Write `.orbit/report.md`.
+Exit codes: `0` completed, `2` a task needs you or an update is available, `3` stopped by a configured limit, `1` error.
 
-All state lives in `.orbit/state.json` (git-ignored). No daemon, no account, no network calls of its own.
+## Windows packages
 
-## Honest limits
+The repository currently provides three distinct Windows deliverables:
 
-- **Not a sandbox.** The command guard blocks `git push/merge/pull`, `gh pr/release/api/...` and aliases that disguise them, but an agent can still call a binary by absolute path or use a web API with credentials it can find. Use the agent's own permission settings, and don't leave deploy/push credentials where it can reach them. "Deploy blocked" is enforced by the prompt and the git/gh guard only.
-- **Verification is only as good as your tests.** ORBIT proves "your command passed", not "the feature is right". Weak tests, weak proof.
-- **Agent flags are unverified on real machines** (see status above). `orbit adapter test` checks them on yours; use `agentArgs` or the `generic` adapter to adjust.
-- **No true session memory.** A resumed task starts a new session and is told what happened; it reads the files. Keep tasks small.
-- **Cost is not metered.** You get attempt, time and task caps, not dollar caps.
-- Sequential only: one task at a time per project.
+- **CLI installer:** Inno Setup package for the ORBIT command-line engine, including PATH integration and an uninstaller.
+- **Standalone CLI executable:** a Node Single Executable Application with the Node runtime bundled; Git and a coding agent are still required.
+- **Legacy desktop/tray application:** a separate Electron/NSIS application with its own package and lifecycle. It is not the same application as the current CLI engine.
 
-## Repo layout
+Build instructions: [Building the executable and installer](docs/BUILDING-EXE.md). Test boundaries and evidence: [Windows certification](docs/WINDOWS-CERTIFICATION.md).
 
-`bin/orbit.js` CLI · `src/engine/` the engine (zero dependencies) · `tests/` · `docs/` · `apps/tray/` the older Windows tray app (Linear-driven, v0.2 behavior, to be rebuilt on this engine; see [ROADMAP](ROADMAP.md)).
+## Architecture and repository map
 
-MIT licensed. Contributions welcome, especially agent adapters and Windows/macOS test reports.
+```text
+bin/                 CLI entry point
+src/engine/          orchestration, policy, adapters, process runner, state, reports, MCP
+scripts/             test discovery, bundling, installers, release validation
+tests/               CLI/engine tests
+integrations/        assistant skill and integration assets
+docs/                user and maintainer documentation
+apps/tray/           separate legacy Electron desktop/tray application
+.github/workflows/   cross-platform CI, Windows certification, release automation
+```
+
+The core engine is JavaScript and uses Node built-ins for its orchestration path. The CLI runs locally; ORBIT does not require an ORBIT-hosted account or orchestration service. Agent CLIs and optional update checks may use their own network connections.
+
+## Boundaries and limitations
+
+ORBIT is an orchestration layer, **not a security sandbox**.
+
+- The command guard blocks supported Git/GitHub command paths, but cannot prevent an agent from invoking an executable by absolute path, using credentials directly, or calling an external API. For stronger isolation, use a container or VM and do not expose credentials the agent should not have.
+- Verification proves that your configured command passed. It does not prove that the feature is correct if the tests are incomplete.
+- Adapter flags and unattended permission modes vary by vendor and version. Test the adapter on the machine where you intend to run it.
+- Each task starts a fresh agent session. ORBIT carries context forward through the plan, Git history, and task notes; it is not persistent model memory.
+- Limits cover attempts, elapsed time, stalls, and task count. ORBIT does not meter provider spend or guarantee a dollar budget.
+- Execution is sequential: one task at a time per project.
+
+Read [Policy](docs/POLICY.md) before running unattended work.
+
+## Development
+
+```bash
+npm test
+npm run check
+npm run test:tray
+```
+
+Windows-specific build and certification details are in [docs/WINDOWS-CERTIFICATION.md](docs/WINDOWS-CERTIFICATION.md). For contribution-sized changes, include focused tests and keep each pull request scoped to one independently reviewable improvement.
+
+## Project documents
+
+- [Changelog](CHANGELOG.md)
+- [Roadmap](ROADMAP.md)
+- [Writing effective plans](docs/WRITING-TASKS.md)
+- [Agent adapters](docs/ADAPTERS.md)
+- [Policy reference](docs/POLICY.md)
+- [Assistant integrations](docs/INTEGRATIONS.md)
+- [Windows certification](docs/WINDOWS-CERTIFICATION.md)
+- [Executable and installer build](docs/BUILDING-EXE.md)
+
+## License
+
+ORBIT is released under the [MIT License](LICENSE).
