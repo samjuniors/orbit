@@ -34,9 +34,10 @@ jobs:
         run: npm run build:installer
       - name: Certify clean install, same-version reinstall and uninstall
         shell: pwsh
-        env:
-          ORBIT_EXPECTED_VERSION: ${{ github.event.repository.default_branch && '0.7.0' || '0.7.0' }}
-        run: ./scripts/certify-windows-install.ps1 -InstallerPath "${{ github.workspace }}\dist\Orbit-Setup-$env:ORBIT_EXPECTED_VERSION.exe" -ExpectedVersion "$env:ORBIT_EXPECTED_VERSION"
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $installer = Join-Path $PWD "dist/Orbit-Setup-$version.exe"
+          ./scripts/certify-windows-install.ps1 -InstallerPath $installer -ExpectedVersion $version
       - name: Certify deferred self-update and rollback
         run: node scripts/test-windows-update.js
       - uses: actions/upload-artifact@v4
@@ -66,7 +67,10 @@ jobs:
       - run: npm run dist:win
       - name: Certify desktop install and launch
         shell: pwsh
-        run: ../scripts/certify-tray-install.ps1 -InstallerPath "${{ github.workspace }}\apps\tray\release\Orbit-Desktop-Setup-0.7.0.exe"
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          $installer = Join-Path $PWD "release/Orbit-Desktop-Setup-$version.exe"
+          ../../scripts/certify-tray-install.ps1 -InstallerPath $installer
       - uses: actions/upload-artifact@v4
         with:
           name: ORBIT-Desktop-Windows-Certification
