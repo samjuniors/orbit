@@ -2,7 +2,7 @@
 All notable changes to ORBIT are documented here. Format follows [Keep a Changelog](https://keepachangelog.com/). The CLI/engine release version follows the pre-1.0 policy in [docs/RELEASING.md](docs/RELEASING.md); the root package.json is canonical.
 
 ## [Unreleased]
-- Nothing yet.
+- Add a CI-gated Windows release workflow with required-asset validation, SHA-256 checksums, and source-commit provenance.
 
 ## [0.7.0] - single-file exe, agent upgrade prompts
 ### Added

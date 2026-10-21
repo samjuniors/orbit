@@ -1,0 +1,76 @@
+name: CLI and engine release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+jobs:
+  engine-ci:
+    name: Engine CI (${{ matrix.os }}, Node ${{ matrix.node }})
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        node: [20, 22]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node }}
+      - run: npm ci
+      - run: npm run check
+      - run: npm test
+
+  publish-windows:
+    name: Build, validate and publish Windows release
+    needs: engine-ci
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: |
+            package-lock.json
+            apps/tray/package-lock.json
+      - name: Install engine dependencies
+        run: npm ci
+      - name: Install legacy desktop dependencies
+        run: npm ci --prefix apps/tray
+      - name: Validate release metadata
+        run: npm run validate:release
+      - name: Test legacy desktop app
+        run: |
+          npm --prefix apps/tray run check
+          npm --prefix apps/tray test
+      - name: Build CLI executable
+        run: npm run build:exe
+      - name: Build CLI installer
+        run: npm run build:installer
+      - name: Build legacy desktop installer
+        run: npm run build:gui
+      - name: Validate required assets and generate checksums/provenance
+        run: node scripts/prepare-release-assets.js
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ github.ref_name }}
+          generate_release_notes: true
+          append_body: true
+          body: |
+            ## Supported platforms and tested targets
+            - CLI/engine automated tests: Ubuntu, Windows, and macOS on Node.js 20 and 22.
+            - Published binary and installer assets: Windows x64.
+            - Legacy desktop app: Windows x64 build, checks, and tests.
+      - name: Upload verified assets, checksums and provenance
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: npm run publish:release
