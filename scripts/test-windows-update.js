@@ -56,7 +56,7 @@ async function main() {
   fs.writeFileSync(newPath, 'not a Windows executable');
   const rollbackParent = startParent();
   scheduleWindowsReplacement({ newPath, currentPath, expectedVersion, parentPid: rollbackParent.pid });
-  await waitFor(() => !fs.existsSync(backupPath), 'rollback after failed health check');
+  await waitFor(() => !fs.existsSync(backupPath) && !fs.existsSync(newPath), 'rollback after failed health check');
   const restoredVersion = spawnSync(currentPath, ['--version'], { encoding: 'utf8' });
   if (restoredVersion.status !== 0 || restoredVersion.stdout.trim() !== expectedVersion) {
     throw new Error('Windows updater did not restore the previous executable after a failed health check.');
