@@ -64,6 +64,12 @@ jobs:
         with:
           tag_name: ${{ github.ref_name }}
           generate_release_notes: true
+          append_body: true
+          body: |
+            ## Supported platforms and tested targets
+            - CLI/engine automated tests: Ubuntu, Windows, and macOS on Node.js 20 and 22.
+            - Published binary and installer assets: Windows x64.
+            - Legacy desktop app: Windows x64 build, checks, and tests.
       - name: Upload verified assets, checksums and provenance
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
