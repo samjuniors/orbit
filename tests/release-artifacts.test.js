@@ -44,6 +44,7 @@ test('release metadata records source commit and artifact checksums', () => {
     commit: 'a'.repeat(40),
     nodeVersion: 'v22.0.0',
     platform: 'win32',
+    architecture: 'x64',
     artifacts: [{ name: 'orbit.exe', size: 12, sha256: 'b'.repeat(64) }]
   });
   assert.match(result.checksumText, new RegExp('b{64}  orbit\\.exe'));
@@ -59,6 +60,7 @@ test('release metadata rejects invalid tags, commits and empty artifact lists', 
     commit: 'a'.repeat(40),
     nodeVersion: 'v22.0.0',
     platform: 'win32',
+    architecture: 'x64',
     artifacts: [{ name: 'orbit.exe', size: 12, sha256: 'b'.repeat(64) }]
   };
   assert.throws(() => createReleaseMetadata({ ...base, tag: 'latest' }), /Invalid canonical release tag/);
